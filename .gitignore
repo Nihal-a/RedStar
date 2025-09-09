@@ -1,0 +1,57 @@
+# ----------------------------
+# Python / Django
+# ----------------------------
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+*.log
+.env
+.env.*
+db.sqlite3
+.envrc
+
+# Virtual environments
+env/
+venv/
+.venv/
+
+# Django media/static (if generated locally)
+media/
+staticfiles/
+
+# ----------------------------
+# Node / React (Vite)
+# ----------------------------
+node_modules/
+dist/
+build/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment files
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+
+# ----------------------------
+# OS / Editor junk
+# ----------------------------
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ----------------------------
+# Coverage / Testing
+# ----------------------------
+.coverage
+htmlcov/
+.pytest_cache/

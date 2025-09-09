@@ -1,0 +1,7 @@
+@import "tailwindcss";
+
+@media (min-width: 767px) {
+  .mb-d-none {
+    display: none !important;
+  }
+}
