@@ -15,7 +15,7 @@ SECRET_KEY = env('SECRETKEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -89,9 +89,14 @@ AUTHENTICATION_BACKENDS = [
 
 CORS_ALLOW_ALL_ORIGINS = True  #development purpose only, use with caution in production
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = []
-
-
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:5173',
+    "http://127.0.0.1:5173",
+]
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 

@@ -10,9 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@apollo/client": "^4.0.4",
     "@tailwindcss/vite": "^4.1.13",
     "bootstrap": "^5.3.8",
     "bootstrap-icons": "^1.13.1",
+    "graphql": "^16.11.0",
     "jspdf": "^3.0.2",
     "jspdf-autotable": "^5.0.2",
     "primeicons": "^7.0.0",

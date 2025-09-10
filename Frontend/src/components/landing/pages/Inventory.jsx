@@ -13,48 +13,6 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import redstar_logo_copy from "../../../assets/redstar_logo_copy.jpg";
 
-// Dummy ProductService
-const ProductService = {
-  getProductsMini() {
-    return Promise.resolve([
-      {
-        id: 1,
-        name: "Wheelchair",
-        category: "Assistive Devices",
-        image: "black-watch.jpg",
-        count: 12,
-        available: 4,
-      },
-      {
-        id: 2,
-        name: "Black Watch",
-        category: "Accessories",
-        image: "black-watch.jpg",
-        count: 10,
-        available: 2,
-      },
-      {
-        id: 3,
-        name: "Blue Band",
-        category: "Fitness",
-        image: "blue-band.jpg",
-        count: 2,
-        available: 0,
-      },
-    ]);
-  },
-};
-
-const resolveImageSrc = (image) => {
-  if (!image) return "";
-  if (
-    typeof image === "string" &&
-    (image.startsWith("http") || image.startsWith("data:"))
-  )
-    return image;
-  return `https://primefaces.org/cdn/primereact/images/product/${image}`;
-};
-
 export default function Inventory() {
   const [products, setProducts] = useState([]);
   const [filters, setFilters] = useState({
@@ -79,117 +37,6 @@ export default function Inventory() {
     });
   }, []);
 
-  /* ---------- PDF export ---------- */
-  const exportPDF = () => {
-    const doc = new jsPDF("p", "pt");
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-
-    // doc.text("INVENTORY REPORT", doc.internal.pageSize.getWidth() / -1, 40, {
-    //   align: "right",
-    // });
-    // doc.addImage(imgData, format, x, y, width, height);
-
-    // Title
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(20);
-    doc.setTextColor(224, 21, 20);
-    doc.text("INVENTORY REPORT", pageWidth - 40, 40, {
-      align: "right",
-    });
-
-    doc.addImage(redstar_logo_copy, "PNG", 32, 20, 50, 50);
-
-    //adrees and reg no
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(14);
-    doc.setTextColor(0, 0, 0);
-    doc.text(
-      [
-        "Reg No:",
-        " ",
-        "Mukkilapeedika, Punnathala,",
-        "Malappuram, Kerala, 676552",
-      ],
-      40,
-      100
-    );
-
-    // Subtitle
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    doc.setTextColor(0, 0, 0);
-    doc.text("Generated on: 04 Sep 2025", 450, 100);
-
-    //footer
-    const footerHeight = 13;
-    const bottomMargin = 8;
-    const y = 60;
-
-    doc.setFillColor(224, 21, 20);
-    doc.rect(
-      0,
-      pageHeight - footerHeight - bottomMargin,
-      pageWidth,
-      footerHeight,
-      "F"
-    ); // footer bar
-    doc.setTextColor(255, 255, 255); // white text
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.text("📞 +91 9876543210", 40, y, { align: "left" });
-    doc.text("John Doe", pageWidth / 2, y, { align: "center" });
-    doc.text("✉️ john@example.com", pageWidth - 40, y, { align: "right" });
-    // Table headers & data
-    const headers = [["S.No", "Name", "Category", "Count", "Avail Count"]];
-    const data = products.map((p, index) => [
-      index + 1,
-      p.name || "—",
-      p.category || "—",
-      p.count ?? "_",
-      p.available ?? "_",
-    ]);
-
-    autoTable(doc, {
-      head: headers,
-      headStyles: {
-        fillColor: [224, 21, 20],
-        textColor: 255,
-        fontStyle: "extrabold",
-        halign: "center",
-      },
-      body: data,
-      startY: 200,
-      margin: { left: 32 },
-      theme: "grid",
-      styles: {
-        fontSize: 12,
-        cellWidth: "wrap",
-        overflow: "linebreak",
-      },
-      columnStyles: {
-        1: { cellWidth: 180 },
-        2: { cellWidth: 200 },
-      },
-      didDrawPage: () => {
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const pageHeight = doc.internal.pageSize.getHeight();
-
-        const wmWidth = 300;
-        const wmHeight = 300;
-
-        const x = (pageWidth - wmWidth) / 2;
-        const y = (pageHeight - wmHeight) / 2;
-
-        doc.setGState(new doc.GState({ opacity: 0.1 }));
-        doc.addImage(redstar_logo_copy, "JPG", x, y, wmWidth, wmHeight);
-
-        doc.setGState(new doc.GState({ opacity: 1 }));
-      },
-    });
-
-    doc.save("inventory.pdf");
-  };
   /* ---------- CRUD ---------- */
   const addRow = () => {
     setEditingRow({
@@ -213,7 +60,6 @@ export default function Inventory() {
       message: `Delete "${rowData.name || "this item"}"?`,
       header: "Delete Confirmation",
       headerClassName: "pr-8",
-      // icon: "pi pi-trash text-red-600 text-[10px]",
       icon: (
         <i className="pi pi-trash text-red-600" style={{ fontSize: "18px" }} />
       ),
