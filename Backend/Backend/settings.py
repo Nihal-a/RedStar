@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'Redstar',
     'corsheaders',
+    'graphene_django',
 ]
 
 MIDDLEWARE = [
@@ -61,6 +62,10 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'Backend.wsgi.application'
 
+GRAPHENE = {
+    "SCHEMA": "Redstar.schema.schema" 
+}
+
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
@@ -77,7 +82,7 @@ DATABASES = {
     }
 }
 
-AUTH_USER_MODEL = 'ChatDot.User'
+AUTH_USER_MODEL = 'Redstar.User'
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
 ]
