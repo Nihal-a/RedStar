@@ -10,10 +10,8 @@ import Reports from "./pages/Reports";
 import Bin from "./pages/Bin";
 import Membership from "./pages/Membership";
 
-
 const Home = () => {
   const [selectedMenu, setselectedMenu] = useState("HOME");
-  console.log(selectedMenu);
   const components = {
     HOME: <Dashboard />,
     INVENTORY: <Inventory />,

@@ -10,44 +10,16 @@ import { Toast } from "primereact/toast";
 import { ConfirmDialog, confirmDialog } from "primereact/confirmdialog";
 import { Dialog } from "primereact/dialog";
 import { FilterMatchMode } from "primereact/api";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-
-// Dummy ProductService
-const ProductService = {
-  getProductsMini() {
-    return Promise.resolve([
-      {
-        id: 1,
-        name: "The Alchemist",
-        category: "Novel",
-        author: "Paulo Coelho",
-        count: 2,
-        available: 1,
-      },
-      {
-        id: 2,
-        name: "Pathummayude Aadu",
-        category: "Fiction",
-        image: "black-watch.jpg",
-        author: "Vaikom Muhammad Basheer",
-        count: 2,
-        available: 1,
-      },
-      {
-        id: 3,
-        name: "The Motorcycle Diaries",
-        category: "Memoir",
-        image: "black-watch.jpg",
-        author: "Ernesto Che Guevara",
-        count: 1,
-        available: 0,
-      },
-    ]);
-  },
-};
+import { useQuery, useMutation } from "@apollo/client/react";
+import { CREATE_BOOK } from "../../graphql/mutations";
+import { GET_BOOKS } from "../../graphql/queries";
 
 export default function Book() {
+  //mutation
+  const [createBook] = useMutation(CREATE_BOOK);
+  const { data, loading, error, refetch } = useQuery(GET_BOOKS);
+
+  //component
   const [products, setProducts] = useState([]);
   const [filters, setFilters] = useState({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
@@ -56,27 +28,12 @@ export default function Book() {
   const [first, setFirst] = useState(0);
   const [rows, setRows] = useState(8);
 
-  const data = [
-    "Vaikom Muhammad Basheer",
-    "Hobbit",
-    "Hamlet",
-    "Hunger Games",
-    "Head First Java",
-  ];
-  // Modal states
+  //modal
   const [visible, setVisible] = useState(false);
   const [editingRow, setEditingRow] = useState(null);
   const [authorSuggestions, setAuthorSuggestions] = useState([]);
   const [bookSuggestions, setBookSuggestions] = useState([]);
-
   const toast = useRef(null);
-
-  useEffect(() => {
-    ProductService.getProductsMini().then((data) => {
-      const normalized = data.map((p, idx) => ({ ...p, id: p.id ?? idx + 1 }));
-      setProducts(normalized);
-    });
-  }, []);
 
   const searchBooks = async (event) => {
     if (!event.query.trim()) {
@@ -108,39 +65,6 @@ export default function Book() {
     }
   };
 
-  /* ---------- PDF export ---------- */
-  const exportPDF = () => {
-    const doc = new jsPDF("p", "pt");
-    doc.setFontSize(14);
-    doc.text("Inventory Report", 40, 30);
-
-    const headers = [
-      ["S.No", "Name", "Category", "Count", "Available", "Status"],
-    ];
-    const data = products.map((p, index) => [
-      index + 1,
-      p.name || "—",
-      p.category || "—",
-      p.count ?? 0,
-      p.available ?? 0,
-      getStatus(p.count),
-    ]);
-
-    autoTable(doc, {
-      head: headers,
-      body: data,
-      startY: 50,
-      theme: "grid",
-      styles: {
-        fontSize: 10,
-        cellWidth: "wrap",
-        overflow: "linebreak",
-      },
-    });
-
-    doc.save("inventory.pdf");
-  };
-
   /* ---------- CRUD ---------- */
   const addRow = () => {
     setEditingRow({
@@ -156,7 +80,7 @@ export default function Book() {
     setVisible(true);
   };
 
-  const confirmDelete = (rowData) => {
+  const confirmDelete =async (rowData) => {
     confirmDialog({
       message: `Delete "${rowData.name || "this item"}"?`,
       header: "Delete Confirmation",
@@ -204,6 +128,16 @@ export default function Book() {
     } else {
       updated = products.map((p) => (p.id === editingRow.id ? editingRow : p));
     }
+
+    createBook({
+      variables: {
+        name: editingRow.name,
+        category: editingRow.category,
+        author: editingRow.author,
+        total: editingRow.count,
+      },
+    });
+
     setProducts(updated);
     setVisible(false);
     toast.current?.show({
@@ -235,12 +169,6 @@ export default function Book() {
     );
   };
 
-  const searchAuthor = (event) => {
-    let query = event.query.toLowerCase();
-    let filtered = data.filter((item) => item.toLowerCase().includes(query));
-    setAuthorSuggestions(filtered);
-  };
-
   const serialBody = (rowData, options) => first + options.rowIndex + 1;
 
   const onGlobalFilterChange = (e) => {
@@ -261,7 +189,6 @@ export default function Book() {
     <section className="w-full min-h-screen px-5 py-5 bg-[#f5f5f5]">
       <Toast ref={toast} />
       <ConfirmDialog />
-
       <div className="w-full  bg-white rounded-lg shadow-md p-4 mb-4 flex  items-center justify-between ">
         <div className="w-full flex flex-col md:flex-row items-center justify-between gap-3">
           <div className="">
@@ -279,157 +206,162 @@ export default function Book() {
             >
               Add Book
             </button>
-            <button
-              onClick={exportPDF}
-              className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center cursor-pointer"
-            >
+            <button className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center cursor-pointer">
               <i class="bi bi-file-earmark-pdf pr-1 "></i>
               Export pdf
             </button>
           </div>
         </div>
       </div>
-
       <div className="bg-white rounded-lg shadow-md p-4 ">
-        <div className="w-full p-5 bg-[#F9FAFB] mb-3 rounded-sm border-1 border-[#e6e6e6] flex justify-between">
-          <div className="opacity-0 ">o</div>
-          <div className="relative ">
-            <input
-              value={globalFilterValue}
-              onChange={onGlobalFilterChange}
-              type="text"
-              placeholder="Search..."
-              className="w-full py-2 md:pl-8 pl-2 pr-3 text-sm rounded-md ring-1 ring-gray-300  focus:outline-none"
-            />
-            <i className="bi bi-search hidden md:block absolute left-[10px] top-[50%] translate-y-[-50%] text-[14px] text-black"></i>
-          </div>
-        </div>
-
-        <DataTable
-          value={products}
-          dataKey="id"
-          paginator
-          draggable={false}
-          rows={10}
-          alwaysShowPaginator={true}
-          paginatorClassName="mt-3 "
-          first={first}
-          removableSort
-          size="small"
-          stripedRows
-          onPage={onPage} //for when adding new coloumn new added will be listed at last
-          rowsPerPageOptions={[5, 10, 20, 50]}
-          filters={filters}
-          globalFilterFields={["name", "category"]}
-          emptyMessage="No inventory found."
-          tableStyle={{ minWidth: "70rem", tableLayout: "fixed" }}
-          className="min-h-full h-[72vh] overflow-auto !text-[14px] !font-[poppins]"
-        >
-          <Column
-            header="S.No"
-            headerClassName="font-[poppins]"
-            body={serialBody}
-            alignHeader={"center"}
-            style={{
-              width: "5%",
-              textAlign: "center",
-            }}
-          />
-          <Column
-            header="Actions"
-            headerClassName="font-[poppins]"
-            body={(rowData) => (
-              <div className="w-full flex items-center justify-center gap-2">
-                <button
-                  className=" !bg-blue-500 !text-white flex items-center justify-center rounded-[6px] p-2.5 cursor-pointer"
-                  onClick={() => {
-                    setEditingRow(rowData);
-                    setVisible(true);
-                  }}
-                >
-                  <i class="bi bi-pencil leading-none"></i>
-                </button>
-                <button
-                  className=" !bg-red-500 !text-white flex items-center justify-center rounded-[6px] p-2.5 cursor-pointer"
-                  onClick={() => confirmDelete(rowData)}
-                >
-                  <i class="bi bi-trash leading-none"></i>
-                </button>
+        {loading || error ? (
+          loading ? (
+            <p>Loading books...</p>
+          ) : (
+            <p>Error: {error.message}</p>
+          )
+        ) : (
+          <>
+            <div className="w-full p-5 bg-[#F9FAFB] mb-3 rounded-sm border-1 border-[#e6e6e6] flex justify-between">
+              <div className="opacity-0 ">o</div>
+              <div className="relative ">
+                <input
+                  value={globalFilterValue}
+                  onChange={onGlobalFilterChange}
+                  type="text"
+                  placeholder="Search..."
+                  className="w-full py-2 md:pl-8 pl-2 pr-3 text-sm rounded-md ring-1 ring-gray-300  focus:outline-none"
+                />
+                <i className="bi bi-search hidden md:block absolute left-[10px] top-[50%] translate-y-[-50%] text-[14px] text-black"></i>
               </div>
-            )}
-            alignHeader={"center"}
-            style={{
-              width: "10%",
-              textAlign: "center",
-            }}
-          />
+            </div>
 
-          <Column
-            field="name"
-            header="Name"
-            headerClassName="font-[poppins]"
-            sortable
-            alignHeader={"center"}
-            style={{
-              // width: "15%",
-              textAlign: "center",
-            }}
-          />
-          <Column
-            field="author"
-            header="Author"
-            headerClassName="font-[poppins]"
-            sortable
-            alignHeader={"center"}
-            style={{
-              textAlign: "center",
-            }}
-          />
+            <DataTable
+              value={data.books}
+              dataKey="id"
+              paginator={products.length > 0}
+              draggable={false}
+              rows={10}
+              alwaysShowPaginator={true}
+              paginatorClassName="mt-3 "
+              first={first}
+              removableSort
+              size="small"
+              stripedRows
+              onPage={onPage} //for when adding new coloumn new added will be listed at last
+              rowsPerPageOptions={[5, 10, 20, 50]}
+              filters={filters}
+              globalFilterFields={["name", "category"]}
+              emptyMessage="No inventory found."
+              tableStyle={{ minWidth: "70rem", tableLayout: "fixed" }}
+              className="min-h-full h-[72vh] overflow-auto !text-[14px] !font-[poppins]"
+            >
+              <Column
+                header="S.No"
+                headerClassName="font-[poppins]"
+                body={serialBody}
+                alignHeader={"center"}
+                style={{
+                  width: "5%",
+                  textAlign: "center",
+                }}
+              />
+              <Column
+                header="Actions"
+                headerClassName="font-[poppins]"
+                body={(rowData) => (
+                  <div className="w-full flex items-center justify-center gap-2">
+                    <button
+                      className=" !bg-blue-500 !text-white flex items-center justify-center rounded-[6px] p-2.5 cursor-pointer"
+                      onClick={() => {
+                        setEditingRow(rowData);
+                        setVisible(true);
+                      }}
+                    >
+                      <i class="bi bi-pencil leading-none"></i>
+                    </button>
+                    <button
+                      className=" !bg-red-500 !text-white flex items-center justify-center rounded-[6px] p-2.5 cursor-pointer"
+                      onClick={() => confirmDelete(rowData)}
+                    >
+                      <i class="bi bi-trash leading-none"></i>
+                    </button>
+                  </div>
+                )}
+                alignHeader={"center"}
+                style={{
+                  width: "10%",
+                  textAlign: "center",
+                }}
+              />
 
-          <Column
-            field="category"
-            header="Category"
-            headerClassName="font-[poppins]"
-            alignHeader={"center"}
-            style={{
-              // width: "15%",
-              textAlign: "center",
-            }}
-          />
+              <Column
+                field="name"
+                header="Name"
+                headerClassName="font-[poppins]"
+                sortable
+                alignHeader={"center"}
+                style={{
+                  // width: "15%",
+                  textAlign: "center",
+                }}
+              />
+              <Column
+                field="author"
+                header="Author"
+                headerClassName="font-[poppins]"
+                sortable
+                alignHeader={"center"}
+                style={{
+                  textAlign: "center",
+                }}
+              />
 
-          <Column
-            field="count"
-            header="Count"
-            headerClassName="font-[poppins]"
-            alignHeader={"center"}
-            style={{
-              width: "10%",
-              textAlign: "center",
-            }}
-          />
-          <Column
-            field="available"
-            header="Available Stock"
-            headerClassName="font-[poppins]"
-            alignHeader={"center"}
-            style={{
-              width: "10%",
-              textAlign: "center",
-            }}
-          />
-          <Column
-            header="Status"
-            headerClassName="font-[poppins]"
-            body={statusBody}
-            alignHeader={"center"}
-            style={{
-              // width: "15%",
-              textAlign: "center",
-            }}
-          />
-        </DataTable>
+              <Column
+                field="category"
+                header="Category"
+                headerClassName="font-[poppins]"
+                alignHeader={"center"}
+                style={{
+                  // width: "15%",
+                  textAlign: "center",
+                }}
+              />
+
+              <Column
+                field="total"
+                header="Count"
+                headerClassName="font-[poppins]"
+                alignHeader={"center"}
+                style={{
+                  width: "10%",
+                  textAlign: "center",
+                }}
+              />
+              <Column
+                field="available"
+                header="Available Stock"
+                headerClassName="font-[poppins]"
+                alignHeader={"center"}
+                style={{
+                  width: "10%",
+                  textAlign: "center",
+                }}
+              />
+              <Column
+                header="Status"
+                headerClassName="font-[poppins]"
+                body={statusBody}
+                alignHeader={"center"}
+                style={{
+                  // width: "15%",
+                  textAlign: "center",
+                }}
+              />
+            </DataTable>
+          </>
+        )}
       </div>
-
       {/* Edit/Add Modal */}
       <Dialog
         header={editingRow?._isNew ? "Add Book" : "Edit Book Details"}
@@ -464,7 +396,6 @@ export default function Book() {
               </label>
               <AutoComplete
                 value={editingRow.name}
-                required={true}
                 suggestions={bookSuggestions}
                 completeMethod={searchBooks}
                 field="title"
@@ -490,7 +421,6 @@ export default function Book() {
               </label>
               <InputText
                 value={editingRow.author}
-                required={true}
                 placeholder="Type author name..."
                 onChange={(e) =>
                   setEditingRow({ ...editingRow, author: e.target.value })
@@ -504,7 +434,6 @@ export default function Book() {
               </label>
               <InputText
                 value={editingRow.category}
-                required={true}
                 placeholder="Type category of book..."
                 onChange={(e) =>
                   setEditingRow({ ...editingRow, category: e.target.value })
@@ -518,7 +447,6 @@ export default function Book() {
               </label>
               <InputNumber
                 value={editingRow.count}
-                required={true}
                 onValueChange={(e) =>
                   setEditingRow({ ...editingRow, count: e.value ?? 0 })
                 }

@@ -43,14 +43,14 @@ class User(AbstractBaseUser,PermissionsMixin):
 
 class Category(models.Model):
     name = models.CharField( max_length=100, null=False)
+    total = models.IntegerField(null=False, blank=False)
+    available = models.IntegerField(null=True, blank=True)
 
 class Inventory(models.Model):
     name = models.CharField(max_length=100,null=False, blank=False)
-    unique_code = models.CharField(max_length=15, null=True, blank=True)
     image = models.ImageField(upload_to="Inventory_images/", blank=True, null=True)
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
-    total = models.IntegerField(null=False, blank=False)
-    available = models.IntegerField(default=total)
+    status = models.BooleanField(default=True)
 
 class InventoryLending(models.Model):
     name = models.CharField(max_length=100, null=False, blank=False)
@@ -67,7 +67,7 @@ class Books(models.Model):
     author = models.CharField(max_length=100, null=True, blank=True)
     category = models.CharField(max_length=100, null=True, blank=True)
     total = models.IntegerField(null=False, blank=False)
-    available = models.IntegerField(default=total)
+    available = models.IntegerField(null=True, blank=True)
 
 class BooksLending(models.Model):
     name = models.CharField(max_length=100, null=False, blank=False)

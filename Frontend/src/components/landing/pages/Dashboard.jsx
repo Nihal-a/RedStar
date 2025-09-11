@@ -30,7 +30,9 @@ const Dashboard = () => {
             <p className="font-[poppins] font-semibold lg:text-[16px] text-[14px]">
               INVENTORY
             </p>
-            <p className="font-[poppins] font-bold lg:text-[33px] text-[27px]">70</p>
+            <p className="font-[poppins] font-bold lg:text-[33px] text-[27px]">
+              70
+            </p>
             <p className="font-[poppins] font-light text-[14px] text-gray-500">
               Total number of inventory.
             </p>
@@ -44,7 +46,9 @@ const Dashboard = () => {
             <p className="font-[poppins] font-semibold lg:text-[16px] text-[14px]">
               ISSUED BOOKS
             </p>
-            <p className="font-[poppins] font-bold lg:text-[33px] text-[27px]">53</p>
+            <p className="font-[poppins] font-bold lg:text-[33px] text-[27px]">
+              53
+            </p>
             <p className="font-[poppins] font-light text-[14px] text-gray-500">
               Books currently lented.
             </p>
@@ -59,7 +63,9 @@ const Dashboard = () => {
             <p className="font-[poppins] font-semibold lg:text-[16px] text-[14px]">
               ISSUED INVENTORY
             </p>
-            <p className="font-[poppins] font-bold lg:text-[33px] text-[27px]">37</p>
+            <p className="font-[poppins] font-bold lg:text-[33px] text-[27px]">
+              37
+            </p>
             <p className="font-[poppins] font-light text-[14px] text-gray-500">
               Inventory currently lented.
             </p>
@@ -75,7 +81,7 @@ const Dashboard = () => {
               FUND
             </p>
             <p className="font-[poppins] font-bold lg:text-[33px] text-[27px]">
-              1000<i class="bi bi-currency-rupee"></i>
+              1000<i className="bi bi-currency-rupee"></i>
             </p>
             <p className="font-[poppins] font-light text-[14px] text-gray-500 ">
               Available fund.
