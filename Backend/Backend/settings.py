@@ -91,11 +91,11 @@ CORS_ALLOW_ALL_ORIGINS = True  #development purpose only, use with caution in pr
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',
-    "http://127.0.0.1:5173",
+    'http://192.168.18.144:5173', 
 ]
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
-    "http://127.0.0.1:5173",
+    'http://192.168.18.144:5173', 
 ]
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

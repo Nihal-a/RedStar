@@ -45,10 +45,10 @@ class Category(models.Model):
     name = models.CharField( max_length=100, null=False)
     total = models.IntegerField(null=False, blank=False)
     available = models.IntegerField(null=True, blank=True)
+    image = models.ImageField(upload_to="Inventory_images/", blank=True, null=True)
 
 class Inventory(models.Model):
     name = models.CharField(max_length=100,null=False, blank=False)
-    image = models.ImageField(upload_to="Inventory_images/", blank=True, null=True)
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
     status = models.BooleanField(default=True)
 

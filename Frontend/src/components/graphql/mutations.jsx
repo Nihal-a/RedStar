@@ -1,21 +1,29 @@
 import { gql } from "@apollo/client";
 
 export const CREATE_CATEGORY = gql`
-  mutation CreateCategory($ID: Int!) {
+  mutation CreateCategory($name: String!) {
     createCategory(name: $name) {
       category {
         id
         name
-        category
-        author
+        total
+        available
       }
     }
   }
 `;
 
+export const DELETE_CATEGORY = gql`
+  mutation DeleteInventory($id: Int!) {
+    deleteCategory(id: $id) {
+      success
+    }
+  }
+`;
+
 export const CREATE_INVENTORY = gql`
-  mutation CreateInventory($name: String!, $category: ID!, $total: Int!) {
-    createInventory(name: $name, category: $category, total: $total) {
+  mutation CreateInventory($name: String!, $category: ID!) {
+    createInventory(name: $name, category: $category) {
       inventory {
         id
         name
@@ -23,16 +31,26 @@ export const CREATE_INVENTORY = gql`
           id
           name
         }
-        total
+      }
+    }
+  }
+`;
+
+export const UPDATE_INVENTORY = gql`
+  mutation UpdateInventory($id: ID!, $name: String, $category: ID) {
+    updateInventory(id: $id, name: $name, category: $category) {
+      inventory {
+        id
+        name
       }
     }
   }
 `;
 
 export const DELETE_INVENTORY = gql`
-  mutation DeleteInventory($id: Int!) {
-    deleteCategory(id: $id) {
-      success
+  mutation DeleteInventory($id: ID!) {
+    deleteInventory(id: $id) {
+      ok
     }
   }
 `;

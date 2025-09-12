@@ -1,4 +1,5 @@
 import graphene
+from graphql import GraphQLError
 from graphene_django.types import DjangoObjectType
 from .models import *
 
@@ -11,11 +12,11 @@ class BookType(DjangoObjectType):
 class InventoryType(DjangoObjectType):
     class Meta:
         model = Inventory
-        fields = ("id", "name",  "image", "category", "status")
+        fields = ("id", "name", "category", "status")
 class CategoryType(DjangoObjectType):
     class Meta:
         model = Category
-        fields = ("id", "name","total", "available")
+        fields = ("id", "name", "total", "available", "image",)
 
 class Query(graphene.ObjectType):
     books = graphene.List(BookType)
@@ -30,6 +31,7 @@ class Query(graphene.ObjectType):
     
     def resolve_categories(root, info):
         return Category.objects.all()
+    
 
 schema = graphene.Schema(query=Query)
 
@@ -59,10 +61,35 @@ class CreateInventory(graphene.Mutation):
     inventory = graphene.Field(InventoryType)
 
     def mutate(root, info, name,  category ):
-        print(name,category)
+        if Inventory.objects.filter(name__iexact=name).exists():
+            raise GraphQLError(f"Product with name '{name}' already exists.")
+        
         category_obj = Category.objects.get(pk=int(category))
+        category_obj.total += 1
+        category_obj.available += 1
+        category_obj.save()
+        
         inventory = Inventory.objects.create(name=name, category=category_obj,  )
         return CreateInventory(inventory=inventory)
+class UpdateInventory(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+        name = graphene.String()
+        category = graphene.ID()
+
+    inventory = graphene.Field(InventoryType)
+
+    def mutate(root, info, id, name=None,  category=None ):
+        print(id,name,category)
+        inventory = Inventory.objects.get(pk=int(id))
+        if name is not None:
+            inventory.name=name
+        if category is not None:
+            category_obj = Category.objects.get(pk=int(category))
+            inventory.category=category_obj
+
+        inventory.save()
+        return UpdateInventory(inventory=inventory)
 
 class DeleteInventory(graphene.Mutation):
     class Arguments:
@@ -72,23 +99,25 @@ class DeleteInventory(graphene.Mutation):
 
     def mutate(self, info, id):
         try:
+            print(id)
             inventory = Inventory.objects.get(pk=id)
             inventory.delete()
             return DeleteInventory(ok=True)
-        except Books.DoesNotExist:
+        except Inventory.DoesNotExist:
             return DeleteInventory(ok=False)
 
 class CreateCategory(graphene.Mutation):
     class Arguments:
         name = graphene.String(required=True)
-        total = graphene.Int(required=True)
-        available = graphene.Int(required=False)
 
     category = graphene.Field(CategoryType)
 
-    def mutate(root, info, name, total):
-        category = Category.objects.create(name=name, total=total, available=total  )
-        return CreateCategory(inventory=category)
+    def mutate(root, info, name, ):
+        if Category.objects.filter(name__iexact=name).exists():
+            raise GraphQLError(f"Category with name '{name}' already exists.")
+        
+        category = Category.objects.create(name=name, total=0, available=0  )
+        return CreateCategory(category=category)
     
     
 class DeleteBook(graphene.Mutation):
@@ -111,6 +140,9 @@ class Mutation(graphene.ObjectType):
     create_book = CreateBook.Field()
     delete_book = DeleteBook.Field()
     create_inventory = CreateInventory.Field()
+    update_inventory = UpdateInventory.Field()
+    delete_inventory = DeleteInventory.Field()
+    create_category = CreateCategory.Field()
     
 
 

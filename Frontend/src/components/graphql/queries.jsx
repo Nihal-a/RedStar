@@ -24,9 +24,11 @@ export const GET_INVENTORIES = gql`
         total
         available
       }
+      status
     }
   }
 `;
+
 export const GET_CATEGORIES = gql`
   query GetCategories {
     categories {
