@@ -15,7 +15,9 @@ import { GET_CATEGORIES, GET_INVENTORIES } from "../../graphql/queries";
 import {
   CREATE_CATEGORY,
   CREATE_INVENTORY,
+  DELETE_CATEGORY,
   DELETE_INVENTORY,
+  UPDATE_CATEGORY,
   UPDATE_INVENTORY,
 } from "../../graphql/mutations";
 
@@ -29,17 +31,20 @@ export default function Inventory() {
     refetch: categoryFetch,
   } = useQuery(GET_CATEGORIES);
 
+  console.log(categoryData);
+
   const [createInventory] = useMutation(CREATE_INVENTORY);
   const [DeleteInventory] = useMutation(DELETE_INVENTORY);
   const [createCategory] = useMutation(CREATE_CATEGORY);
   const [updateInventory] = useMutation(UPDATE_INVENTORY);
+  const [updateCategory] = useMutation(UPDATE_CATEGORY);
+  const [deleteCategory] = useMutation(DELETE_CATEGORY);
 
   //components
   const [filters, setFilters] = useState({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
   });
   const [globalFilterValue, setGlobalFilterValue] = useState("");
-  const [selectedProducts, setSelectedProducts] = useState([]);
   const [first, setFirst] = useState(0);
   const [rows, setRows] = useState(10);
 
@@ -51,9 +56,9 @@ export default function Inventory() {
   const [editingRow, setEditingRow] = useState(null);
   const [orginalData, setorginalData] = useState({});
   const [formData, setformData] = useState({});
-  console.log(formData, ":formdata", orginalData, ":orginal");
   const [categoryRow, setcategoryRow] = useState({
     name: "",
+    image: null,
   });
   const toast = useRef(null);
 
@@ -68,7 +73,7 @@ export default function Inventory() {
   };
 
   const saveRow = async () => {
-    if (!formData.name?.trim() || !formData.category) {
+    if (!editingRow.name?.trim() || !editingRow.category) {
       toast.current?.show({
         severity: "warn",
         summary: "Validation",
@@ -78,12 +83,12 @@ export default function Inventory() {
     }
 
     try {
-      if (formData._isNew) {
+      if (editingRow._isNew) {
         // CREATE
         await createInventory({
           variables: {
-            name: formData.name,
-            category: formData.category,
+            name: editingRow.name,
+            category: editingRow.category,
           },
           update: (cache, { data }) => {
             if (!data?.createInventory) return;
@@ -128,6 +133,17 @@ export default function Inventory() {
     }
   };
 
+  const resolveImageSrc = (image) => {
+    if (!image) return "";
+    if (image.startsWith("data:image")) {
+      return image;
+    }
+    if (image.startsWith("http://") || image.startsWith("https://")) {
+      return image;
+    }
+    return `${process.env.REACT_APP_API_URL || ""}${image}`;
+  };
+
   const categoryOptions = categoryLoading
     ? [{ label: "Select Category", value: "" }]
     : [
@@ -143,9 +159,9 @@ export default function Inventory() {
           })) || []),
       ];
 
-  const confirmDelete = (rowData) => {
+  const confirmDelete = (rowData, type) => {
     confirmDialog({
-      message: `Delete "${rowData.name || "this item"}"?`,
+      message: `Delete "${rowData.name || "this item"}"? ${type}`,
       header: "Delete Confirmation",
       headerClassName: "pr-8",
       icon: (
@@ -156,12 +172,19 @@ export default function Inventory() {
       rejectLabel: "Cancel",
       draggable: false,
       accept: async () => {
-        await DeleteInventory({ variables: { id: rowData.id } });
-        refetch();
+        if (type === "inventory") {
+          await DeleteInventory({ variables: { id: rowData.id } });
+          refetch();
+          categoryFetch();
+        } else if (type === "category") {
+          await deleteCategory({ variables: { id: rowData.id } });
+          categoryFetch();
+        }
+
         toast.current?.show({
           severity: "success",
           summary: "Deleted",
-          detail: "Item removed",
+          detail: `${type === "inventory" ? "Inventory" : "Category"} removed`,
         });
       },
     });
@@ -170,6 +193,7 @@ export default function Inventory() {
   const addCategoryRow = () => {
     setcategoryRow({
       name: "",
+      image: null,
       _isNew: true,
     });
     setcategoryModalVisible(true);
@@ -188,8 +212,10 @@ export default function Inventory() {
     if (!categoryRow) return;
     try {
       if (categoryRow._isNew) {
-        await createCategory({ variables: { name: categoryRow.name } });
-        setcategoryRow({ name: "" });
+        await createCategory({
+          variables: { name: categoryRow.name, image: categoryRow.image },
+        });
+        setcategoryRow({ name: "", image: null });
         // setcategoryModalVisible(false);
         toast.current?.show({
           severity: "success",
@@ -199,7 +225,6 @@ export default function Inventory() {
         categoryFetch();
       }
     } catch (err) {
-      console.log(err.message);
       toast.current?.show({
         severity: "error",
         summary: "Error",
@@ -244,34 +269,13 @@ export default function Inventory() {
     setRows(e.rows);
   };
 
-  const getChangeFields = () => {
-    const changes = {};
-    for (const key in formData) {
-      if (formData[key] !== orginalData[key]) {
-        changes[key] = formData[key];
-      }
-    }
-    return changes;
-  };
-  const allowEdit = (rowData) => {
-    return rowData.name;
-  };
-
-  useEffect(() => {
-    if (editingRow) {
-      setorginalData(editingRow);
-      setformData({ ...editingRow });
-    }
-  }, [editingRow]);
-  console.log(categoryRow);
-
   const textEditor = (options) => {
     return (
       <InputText
         type="text"
         value={options.value}
         onChange={(e) => options.editorCallback(e.target.value)}
-        className="flex-1 placeholder:text-sm !p-1.5 !font-[poppins] !px-3 !rounded-l-md !rounded-r-none"
+        className=" flex-1 placeholder:!text-sm !p-2 md:!p-1.5 !font-[poppins] !px-3 !rounded-md !mx-2 sm:mx-3 w-full !md:w-auto"
       />
     );
   };
@@ -281,31 +285,29 @@ export default function Inventory() {
       <Toast ref={toast} />
       <ConfirmDialog />
 
-      <div className="w-full  bg-white rounded-lg shadow-md p-4 mb-4 flex items-center justify-between ">
-        <div className="w-full flex flex-col md:flex-row  items-center justify-between gap-3">
-          <div>
-            <h1 className="font-bold md:text-start text-center md:text-[22px] text-[16px]">
-              INVENTORY
-            </h1>
+      <div className="w-full bg-white rounded-lg shadow-md p-4 mb-4 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="flex flex-col md:flex-row items-center md:items-start justify-between w-full gap-3">
+          <div className="text-center md:text-left">
+            <h1 className="font-bold text-[16px] md:text-[22px]">INVENTORY</h1>
             <p className="text-sm text-gray-500">
               Manage inventory, add/edit inventory
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3 justify-center md:justify-start w-full md:w-auto">
             <button
               onClick={addRow}
-              className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center cursor-pointer"
+              className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center flex-shrink-0"
             >
               Add Inventory
             </button>
             <button
               onClick={addCategoryRow}
-              className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[rgb(224,21,20)] hover:bg-[#ff2828] flex items-center justify-center cursor-pointer"
+              className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[rgb(224,21,20)] hover:bg-[#ff2828] flex items-center justify-center flex-shrink-0"
             >
               Add Category
             </button>
-            <button className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center cursor-pointer">
-              <i className="bi bi-file-earmark-pdf pr-1 "></i>
+            <button className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center flex-shrink-0">
+              <i className="bi bi-file-earmark-pdf pr-1"></i>
               Export pdf
             </button>
           </div>
@@ -343,29 +345,23 @@ export default function Inventory() {
               paginatorClassName="mt-3"
               first={first}
               removableSort
-              selectionMode={"checkbox"}
-              selection={selectedProducts}
-              onSelectionChange={(e) => setSelectedProducts(e.value)}
-              rowClassName={(rowData) =>
-                selectedProducts?.some((p) => p.id === rowData.id)
-                  ? "!bg-[#e0141415] !text-[#E01514]"
-                  : ""
-              }
               size="small"
               onPage={onPage}
               rowsPerPageOptions={[5, 10, 20, 50]}
               filters={filters}
-              globalFilterFields={["category"]}
+              globalFilterFields={["name"]}
               emptyMessage="No inventory found."
-              tableStyle={{ minWidth: "70rem", tableLayout: "fixed" }}
-              className="min-h-full h-[72vh] overflow-auto !text-[14px] !font-[poppins]"
+              tableStyle={{
+                minWidth:
+                  window.innerWidth >= 1024
+                    ? "60rem"
+                    : window.innerWidth >= 768
+                    ? "50rem"
+                    : "40rem",
+                tableLayout: "fixed",
+              }}
+              className="min-h-full h-[72vh] overflow-auto !text-[14px] !font-[poppins] "
             >
-              <Column
-                selectionMode="multiple"
-                alignHeader={"center"}
-                headerStyle={{ width: "5%" }}
-                bodyStyle={{ textAlign: "center" }}
-              />
               <Column
                 header="S.No"
                 headerClassName="font-[poppins]"
@@ -399,13 +395,17 @@ export default function Inventory() {
               <Column
                 header="Image"
                 headerClassName=""
-                body={(rowData) => (
-                  <img
-                    // src={resolveImageSrc(rowData.image)}
-                    alt="item"
-                    className="mx-auto w-10 h-10 object-cover rounded-[6px]"
-                  />
-                )}
+                body={(rowData) => {
+                  return rowData.image ? (
+                    <img
+                      src={rowData.image}
+                      alt={rowData.name}
+                      className="mx-auto w-10 h-10 object-cover rounded-[6px]"
+                    />
+                  ) : (
+                    <span className="text-gray-400">No Image</span>
+                  );
+                }}
                 bodyClassName="text-center"
                 alignHeader={"center"}
                 style={{
@@ -436,11 +436,12 @@ export default function Inventory() {
               />
               <Column
                 field="available"
-                header="Available Stock"
+                header="Avail Stock"
+                sortable
                 headerClassName="font-[poppins]"
                 alignHeader={"center"}
                 style={{
-                  width: "10%",
+                  width: "13%",
                   textAlign: "center",
                 }}
               />
@@ -464,7 +465,7 @@ export default function Inventory() {
         headerClassName="!font-[poppins]"
         visible={visible}
         draggable={false}
-        className="w-[90%] md:w-[40%] "
+        className="w-[90%] md:w-[40%] sm:w-[40%]"
         modal
         onHide={() => setVisible(false)}
         footer={
@@ -528,28 +529,28 @@ export default function Inventory() {
         headerClassName="!font-[poppins]"
         visible={categoryModalVisible}
         draggable={false}
-        className="w-[90%] md:w-[40%] "
+        className="w-[90%] lg:w-[40%] md:w-[50%] sm:w-[50%]"
         modal
         onHide={() => setcategoryModalVisible(false)}
       >
-        <div className="flex flex-col gap-3">
-          <div>
+        <div className="w-full flex flex-col gap-3">
+          <div className="w-full">
             <label className="block text-sm font-medium mb-1">
               Category Name*
             </label>
-            <div className="flex">
+            <div className="w-full flex">
               <InputText
                 value={categoryRow.name}
                 onChange={(e) =>
                   setcategoryRow({ ...categoryRow, name: e.target.value })
                 }
                 placeholder="Type category name..."
-                className="flex-1 placeholder:text-sm !p-1.5 !font-[poppins] !px-3 !rounded-l-md !rounded-r-none"
+                className="flex-1 placeholder:text-sm  !p-1.5 !font-[poppins] !px-3  font-poppins rounded-md sm:rounded-l-md sm:rounded-r-none w-full"
               />
               <button
                 type="button"
                 onClick={saveCategory}
-                className="px-4 py-2 bg-[#E01514] text-white text-sm font-semibold rounded-r-md  cursor-pointer focus:outline-0 hover:bg-[#ff2828] "
+                className="px-4 py-2 bg-[#E01514] text-white text-sm font-semibold rounded-md sm:rounded-r-md sm:rounded-l-none flex-shrink-0 hover:bg-[#ff2828] focus:outline-none"
               >
                 Add
               </button>
@@ -558,27 +559,41 @@ export default function Inventory() {
               <label className="block text-sm font-medium mb-1">
                 Product Image
               </label>
-              {/* <input
-                type="file"
-                accept="image/*"
-                className="w-full pl-3 ring-1 rounded-sm p-1.5 ring-gray-300 "
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (ev) =>
-                      setEditingRow({ ...editingRow, image: ev.target.result });
-                    reader.readAsDataURL(file);
-                  }
-                }}
-              />
-              {editingRow.image && (
-                <img
-                  src={resolveImageSrc(editingRow.image)}
-                  alt="preview"
-                  className="w-20 h-20 mt-2 object-cover rounded"
+
+              {/* Styled file input */}
+              <label className="w-full flex items-center justify-between px-3 py-2 border border-gray-300 rounded-md cursor-pointer bg-white hover:bg-gray-50 text-sm">
+                <span className="text-gray-600">
+                  {categoryRow.image ? "Change Image" : "Choose an image"}
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (ev) =>
+                        setcategoryRow({
+                          ...categoryRow,
+                          image: ev.target?.result,
+                        });
+                      reader.readAsDataURL(file);
+                    }
+                  }}
                 />
-              )} */}
+              </label>
+
+              {/* Preview */}
+              {categoryRow.image && (
+                <div className="mt-3">
+                  <img
+                    src={resolveImageSrc(categoryRow.image)}
+                    alt="preview"
+                    className="w-25 h-25 sm:w-30 sm:h-30 object-cover rounded-md border border-gray-200"
+                  />
+                </div>
+              )}
             </div>
           </div>
 
@@ -601,8 +616,46 @@ export default function Inventory() {
                 onPage={onPage} //for when adding new coloumn new added will be listed at last
                 filters={filters}
                 emptyMessage="No categories listed."
-                tableStyle={{ minWidth: "40rem", tableLayout: "fixed" }}
+                tableStyle={{
+                  minWidth: "30rem",
+                  tableLayout: "fixed",
+                }}
                 className="min-h-full h-[34vh] overflow-auto !text-[14px] !font-[poppins] mt-5"
+                editMode="row"
+                rowEditorInitIcon="bi bi-pencil cursor-pointer text-blue-500 p-2 rounded bg-blue-100"
+                rowEditorSaveIcon="bi bi-check-lg cursor-pointer text-green-600 p-2 rounded bg-green-100"
+                rowEditorCancelIcon="bi bi-x-lg cursor-pointer text-red-500 p-2 rounded bg-red-100"
+                onRowEditInit={(e) => setorginalData(e.data)}
+                onRowEditCancel={() => {
+                  setorginalData(null);
+                }}
+                onRowEditSave={async (e) => {
+                  try {
+                    const changes = {};
+                    for (const key in e.newData) {
+                      if (e.newData[key] !== e.data[key]) {
+                        changes[key] = e.newData[key];
+                      }
+                    }
+
+                    if (Object.keys(changes).length > 0) {
+                      await updateCategory({
+                        variables: { id: e.newData.id, ...changes },
+                      });
+                      toast.current?.show({
+                        severity: "success",
+                        summary: "Updated",
+                        detail: "Inventory updated successfully",
+                      });
+                    }
+                  } catch (err) {
+                    toast.current?.show({
+                      severity: "error",
+                      summary: "Error",
+                      detail: err.message,
+                    });
+                  }
+                }}
               >
                 <Column
                   header="S.No"
@@ -615,34 +668,43 @@ export default function Inventory() {
                   }}
                 />
                 <Column
+                  rowEditor
+                  style={{
+                    width: "20%",
+                    textAlign: "center",
+                  }}
+                  headerClassName="text-left"
+                  bodyClassName="text-left"
+                />
+                <Column
                   header="Actions"
-                  headerClassName="font-[poppins]"
+                  alignHeader={"center"}
+                  headerClassName="font-[poppins] "
                   body={(rowData) => (
                     <div className="flex gap-2">
                       <i
-                        className="bi bi-pencil cursor-pointer text-blue-500 p-2 rounded bg-blue-100"
-                        onClick={() => {
-                          setEditingRow(rowData);
-                          setVisible(true);
-                        }}
-                      ></i>
-                      <i
                         className="bi bi-trash  cursor-pointer text-red-500 p-2 rounded bg-red-100"
-                        onClick={() => confirmDelete(rowData)}
+                        onClick={() => confirmDelete(rowData, "category")}
                       ></i>
                     </div>
                   )}
-                  alignHeader={"center"}
+                  bodyStyle={{ alignContent: "center" }}
                   style={{
-                    width: "15%",
+                    width: "10%",
                     textAlign: "center",
                   }}
                 />
                 <Column
                   field="name"
                   header="Name"
+                  editor={(options) => textEditor(options)}
                   headerClassName="font-[poppins]"
                   alignHeader={"center"}
+                  body={(rowData) => (
+                    <div className="overflow-x-auto whitespace-nowrap text-center">
+                      {rowData.name}
+                    </div>
+                  )}
                   style={{
                     textAlign: "center",
                   }}
@@ -680,18 +742,49 @@ export default function Inventory() {
                 dataKey="id"
                 rows={10}
                 first={first}
-                removableSort // <-- update state
+                removableSort
                 size="small"
                 editMode="row"
                 stripedRows
                 rowEditorInitIcon="bi bi-pencil cursor-pointer text-blue-500 p-2 rounded bg-blue-100"
                 rowEditorSaveIcon="bi bi-check-lg cursor-pointer text-green-600 p-2 rounded bg-green-100"
                 rowEditorCancelIcon="bi bi-x-lg cursor-pointer text-red-500 p-2 rounded bg-red-100"
-                onPage={onPage} //for when adding new coloumn new added will be listed at last
+                onPage={onPage}
                 filters={filters}
                 emptyMessage="No products listed yet...."
                 tableStyle={{ minWidth: "30rem", tableLayout: "fixed" }}
                 className="min-h-full h-[34vh] overflow-auto !text-[14px] !font-[poppins] mt-5"
+                // onRowEditInit={(e) => setorginalData(e.data)}
+                onRowEditCancel={() => {
+                  setorginalData(null);
+                }}
+                onRowEditSave={async (e) => {
+                  try {
+                    const changes = {};
+                    for (const key in e.newData) {
+                      if (e.newData[key] !== e.data[key]) {
+                        changes[key] = e.newData[key];
+                      }
+                    }
+
+                    if (Object.keys(changes).length > 0) {
+                      await updateInventory({
+                        variables: { id: e.newData.id, ...changes },
+                      });
+                      toast.current?.show({
+                        severity: "success",
+                        summary: "Updated",
+                        detail: "Inventory updated successfully",
+                      });
+                    }
+                  } catch (err) {
+                    toast.current?.show({
+                      severity: "error",
+                      summary: "Error",
+                      detail: err.message,
+                    });
+                  }
+                }}
               >
                 <Column
                   header="S.No"
@@ -699,41 +792,34 @@ export default function Inventory() {
                   body={(rowData, options) => options?.rowIndex + 1}
                   alignHeader="center"
                   style={{
-                    width: "10%",
+                    width: "5%",
                     textAlign: "center",
                   }}
                 />
                 <Column
                   rowEditor
                   style={{
-                    width: "10%",
+                    width: "13%",
                     textAlign: "center",
                   }}
                 />
-                {/* <Column
+                <Column
                   header="Actions"
                   headerClassName="font-[poppins]"
                   body={(rowData) => (
-                    <div className="flex gap-2">
-                      <i
-                        className="bi bi-pencil cursor-pointer text-blue-500 p-2 rounded bg-blue-100"
-                        onClick={() => {
-                          setEditingRow(rowData);
-                          setVisible(true);
-                        }}
-                      ></i>
+                    <div className="flex gap-2 justify-center">
                       <i
                         className="bi bi-trash  cursor-pointer text-red-500 p-2 rounded bg-red-100"
-                        onClick={() => confirmDelete(rowData)}
+                        onClick={() => confirmDelete(rowData, "inventory")}
                       ></i>
                     </div>
                   )}
                   alignHeader={"center"}
                   style={{
-                    width: "15%",
+                    width: "5%",
                     textAlign: "center",
                   }}
-                /> */}
+                />
                 <Column
                   field="name"
                   header="Name"
@@ -741,10 +827,11 @@ export default function Inventory() {
                   headerClassName="font-[poppins]"
                   alignHeader={"center"}
                   style={{
-                    width:"15%",
+                    width: "20%",
                     textAlign: "center",
                   }}
                 />
+
                 <Column
                   field="status"
                   header="Status"

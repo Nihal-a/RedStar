@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     'Redstar',
     'corsheaders',
     'graphene_django',
+    'graphene_file_upload',
 ]
 
 MIDDLEWARE = [
@@ -63,7 +64,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'Backend.wsgi.application'
 
 GRAPHENE = {
-    "SCHEMA": "Redstar.schema.schema" 
+    "SCHEMA": "Redstar.schema.schema",
 }
 
 
@@ -93,10 +94,22 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',
     'http://192.168.18.144:5173', 
 ]
+
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     'http://192.168.18.144:5173', 
 ]
+
+
+
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+os.makedirs(MEDIA_ROOT, exist_ok=True)
+
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880
+
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
@@ -126,6 +139,7 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 
 USE_TZ = True
+
 
 
 # Static files (CSS, JavaScript, Images)

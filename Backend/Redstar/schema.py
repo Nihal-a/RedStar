@@ -1,9 +1,10 @@
 import graphene
+import os
 from graphql import GraphQLError
 from graphene_django.types import DjangoObjectType
 from .models import *
-
-
+from graphene_file_upload.scalars import Upload
+from django.conf import settings
 
 class BookType(DjangoObjectType):
     class Meta:
@@ -16,8 +17,17 @@ class InventoryType(DjangoObjectType):
 class CategoryType(DjangoObjectType):
     class Meta:
         model = Category
-        fields = ("id", "name", "total", "available", "image",)
+        fields = ("id", "name", "total", "available", "image")
 
+    # image_url = graphene.String()
+
+    # def resolve_image_url(self, info):
+    #     if self.image:
+    #         # ImageField always stores file paths, so build the full URL
+    #         return info.context.build_absolute_uri(self.image.url)
+    #     return None
+
+    
 class Query(graphene.ObjectType):
     books = graphene.List(BookType)
     inventories = graphene.List(InventoryType)
@@ -31,6 +41,8 @@ class Query(graphene.ObjectType):
     
     def resolve_categories(root, info):
         return Category.objects.all()
+    
+
     
 
 schema = graphene.Schema(query=Query)
@@ -80,7 +92,6 @@ class UpdateInventory(graphene.Mutation):
     inventory = graphene.Field(InventoryType)
 
     def mutate(root, info, id, name=None,  category=None ):
-        print(id,name,category)
         inventory = Inventory.objects.get(pk=int(id))
         if name is not None:
             inventory.name=name
@@ -99,9 +110,18 @@ class DeleteInventory(graphene.Mutation):
 
     def mutate(self, info, id):
         try:
-            print(id)
             inventory = Inventory.objects.get(pk=id)
+            category_id = inventory.category.id
+            category = Category.objects.get(id=category_id)  # fixed get() call
+            
+            if category.total > 0:
+                category.total -= 1
+            if category.available > 0:
+                category.available -= 1
+            
+            category.save()
             inventory.delete()
+
             return DeleteInventory(ok=True)
         except Inventory.DoesNotExist:
             return DeleteInventory(ok=False)
@@ -109,16 +129,74 @@ class DeleteInventory(graphene.Mutation):
 class CreateCategory(graphene.Mutation):
     class Arguments:
         name = graphene.String(required=True)
-
+        image = graphene.String(required=False)
+    
     category = graphene.Field(CategoryType)
-
-    def mutate(root, info, name, ):
+    
+    def mutate(self, info, name, image=None):
+        
+        
         if Category.objects.filter(name__iexact=name).exists():
             raise GraphQLError(f"Category with name '{name}' already exists.")
         
-        category = Category.objects.create(name=name, total=0, available=0  )
+        # Create the category
+        category = Category.objects.create(
+            name=name, 
+            total=0, 
+            available=0, 
+            image=image
+        )
+        
         return CreateCategory(category=category)
+
+# class CreateCategory(graphene.Mutation):
+#     class Arguments:
+#         name = graphene.String(required=True)
+#         image = Upload(required=False)
+
+#     category = graphene.Field(CategoryType)
+
+#     def mutate(root, info, name,image=None ):
+
+#         if Category.objects.filter(name__iexact=name).exists():
+#             raise GraphQLError(f"Category with name '{name}' already exists.")
+        
+#         if image is not None:
+#             category = Category.objects.create(name=name, total=0, available=0, image=image )
+#         else:
+#             category = Category.objects.create(name=name, total=0, available=0 )
+        
+#         return CreateCategory(category=category)
     
+class UpdateCategory(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+        name = graphene.String()
+
+    category = graphene.Field(CategoryType)
+
+    def mutate(root, info, id, name=None):
+        print(id,name)
+        category = Category.objects.get(pk=int(id))
+        if name is not None:
+            category.name=name
+        
+        category.save()
+        return UpdateCategory(category=category)
+    
+class DeleteCategory(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+
+    ok = graphene.Boolean()
+
+    def mutate(self, info, id):
+        try:
+            category = Category.objects.get(pk=id)
+            category.delete()
+            return DeleteCategory(ok=True)
+        except Category.DoesNotExist:
+            return DeleteCategory(ok=False)
     
 class DeleteBook(graphene.Mutation):
     class Arguments:
@@ -137,12 +215,17 @@ class DeleteBook(graphene.Mutation):
 
 
 class Mutation(graphene.ObjectType):
-    create_book = CreateBook.Field()
-    delete_book = DeleteBook.Field()
+
     create_inventory = CreateInventory.Field()
     update_inventory = UpdateInventory.Field()
     delete_inventory = DeleteInventory.Field()
+
     create_category = CreateCategory.Field()
+    update_category = UpdateCategory.Field()
+    delete_category = DeleteCategory.Field()
+
+    create_book = CreateBook.Field()
+    delete_book = DeleteBook.Field()
     
 
 
