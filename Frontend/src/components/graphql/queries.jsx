@@ -1,18 +1,5 @@
 import { gql } from "@apollo/client";
 
-export const GET_BOOKS = gql`
-  query GetBooks {
-    books {
-      id
-      name
-      category
-      author
-      total
-      available
-    }
-  }
-`;
-
 export const GET_INVENTORIES = gql`
   query GetInventories {
     inventories {
@@ -35,6 +22,42 @@ export const GET_CATEGORIES = gql`
       id
       name
       image
+      total
+      available
+    }
+  }
+`;
+
+export const GET_INVENTORY_LENDING = gql`
+  query GetInventoryLending {
+    inventoryLending {
+      id
+      name
+      mobileNumber
+      address
+      inventory {
+        id
+        name
+        category {
+          id
+          name
+        }
+      }
+      lendedDate
+      returnDate
+      remarks
+      status
+    }
+  }
+`;
+
+export const GET_BOOKS = gql`
+  query GetBooks {
+    books {
+      id
+      name
+      category
+      author
       total
       available
     }

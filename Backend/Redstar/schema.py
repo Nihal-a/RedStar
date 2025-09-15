@@ -27,43 +27,32 @@ class CategoryType(DjangoObjectType):
     #         return info.context.build_absolute_uri(self.image.url)
     #     return None
 
+class InventoryLendingType(DjangoObjectType):
+    class Meta:
+        model = InventoryLending
+        fields = ("id", "name", "mobile_number", "inventory", "address", "lended_date", "return_date", "remarks", "status")
+    
     
 class Query(graphene.ObjectType):
     books = graphene.List(BookType)
     inventories = graphene.List(InventoryType)
     categories = graphene.List(CategoryType)
-
-    def resolve_books(root, info):
-        return Books.objects.all()
-    
-    def resolve_inventories(root, info):
-        return Inventory.objects.all()
+    inventory_lending = graphene.List(InventoryLendingType)
     
     def resolve_categories(root, info):
         return Category.objects.all()
     
+    def resolve_inventories(root, info):
+        return Inventory.objects.all()
 
+    def resolve_inventory_lending(root, info):
+        return InventoryLending.objects.all()
     
+    def resolve_books(root, info):
+        return Books.objects.all()
 
 schema = graphene.Schema(query=Query)
 
-
-
-
-
-class CreateBook(graphene.Mutation):
-    class Arguments:
-        name = graphene.String(required=True)
-        author = graphene.String(required=True)
-        category = graphene.String(required=True)
-        total = graphene.Int(required=True)
-        available = graphene.Int(required=False)
-
-    book = graphene.Field(BookType)
-
-    def mutate(root, info, name, author, category, total, ):
-        book = Books.objects.create(name=name, category=category, author=author, total=total, available=total )
-        return CreateBook(book=book)
 
 class CreateInventory(graphene.Mutation):
     class Arguments:
@@ -86,7 +75,7 @@ class CreateInventory(graphene.Mutation):
 class UpdateInventory(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
-        name = graphene.String()
+        name = graphene.String(required=False)
         category = graphene.ID()
 
     inventory = graphene.Field(InventoryType)
@@ -148,25 +137,6 @@ class CreateCategory(graphene.Mutation):
         )
         
         return CreateCategory(category=category)
-
-# class CreateCategory(graphene.Mutation):
-#     class Arguments:
-#         name = graphene.String(required=True)
-#         image = Upload(required=False)
-
-#     category = graphene.Field(CategoryType)
-
-#     def mutate(root, info, name,image=None ):
-
-#         if Category.objects.filter(name__iexact=name).exists():
-#             raise GraphQLError(f"Category with name '{name}' already exists.")
-        
-#         if image is not None:
-#             category = Category.objects.create(name=name, total=0, available=0, image=image )
-#         else:
-#             category = Category.objects.create(name=name, total=0, available=0 )
-        
-#         return CreateCategory(category=category)
     
 class UpdateCategory(graphene.Mutation):
     class Arguments:
@@ -197,7 +167,46 @@ class DeleteCategory(graphene.Mutation):
             return DeleteCategory(ok=True)
         except Category.DoesNotExist:
             return DeleteCategory(ok=False)
+
+
+class AddInventoryLending(graphene.Mutation):
+    class Arguments:
+        name = graphene.String(required=True)
+        inventory = graphene.ID(required=True)
+        mobile_number = graphene.String(required=True)
+        address = graphene.String(required=True)
+        lended_date = graphene.Date(required=True)
+        remarks = graphene.String(required=False)
     
+    inventory_lending = graphene.Field(InventoryLendingType)
+    
+    def mutate(self, info, name, inventory, mobile_number, address, lended_date, remarks):
+        inventory_lending = InventoryLending.objects.create(
+            name = name, 
+            inventory = Inventory.objects.get(pk=int(inventory)),
+            mobile_number = mobile_number,
+            address = address,
+            lended_date = lended_date,
+            remarks = remarks,
+            status = False
+        )
+        
+        return AddInventoryLending(inventory_lending = inventory_lending)
+    
+class CreateBook(graphene.Mutation):
+    class Arguments:
+        name = graphene.String(required=True)
+        author = graphene.String(required=True)
+        category = graphene.String(required=True)
+        total = graphene.Int(required=True)
+        available = graphene.Int(required=False)
+
+    book = graphene.Field(BookType)
+
+    def mutate(root, info, name, author, category, total, ):
+        book = Books.objects.create(name=name, category=category, author=author, total=total, available=total )
+        return CreateBook(book=book)
+   
 class DeleteBook(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
@@ -223,6 +232,8 @@ class Mutation(graphene.ObjectType):
     create_category = CreateCategory.Field()
     update_category = UpdateCategory.Field()
     delete_category = DeleteCategory.Field()
+
+    add_inventory_lending = AddInventoryLending.Field()
 
     create_book = CreateBook.Field()
     delete_book = DeleteBook.Field()

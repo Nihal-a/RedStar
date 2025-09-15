@@ -1,8 +1,8 @@
 import { gql } from "@apollo/client";
 
 export const CREATE_CATEGORY = gql`
-  mutation CreateCategory($name: String!,$image: String) {
-    createCategory(name: $name,image: $image) {
+  mutation CreateCategory($name: String!, $image: String) {
+    createCategory(name: $name, image: $image) {
       category {
         id
         image
@@ -63,6 +63,38 @@ export const DELETE_INVENTORY = gql`
   mutation DeleteInventory($id: ID!) {
     deleteInventory(id: $id) {
       ok
+    }
+  }
+`;
+
+export const ADD_INVENTORY_LENDING = gql`
+  mutation addInventoryLending(
+    $name: String!
+    $inventory: ID!
+    $mobile_number: String!
+    $address: String!
+    $lended_date: String!
+    $remarks: String
+  ) {
+    addInventoryLending(
+      name: $name
+      inventory: $inventory
+      mobile_number: $mobile_number
+      address: $address
+      lended_date: $lended_date
+      remarks: $remarks
+    ) {
+      inventory_lending {
+        id
+        name
+        address
+        lended_date
+        mobile_number
+        inventory {
+          id
+          name
+        }
+      }
     }
   }
 `;

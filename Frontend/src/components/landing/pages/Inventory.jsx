@@ -31,8 +31,6 @@ export default function Inventory() {
     refetch: categoryFetch,
   } = useQuery(GET_CATEGORIES);
 
-  console.log(categoryData);
-
   const [createInventory] = useMutation(CREATE_INVENTORY);
   const [DeleteInventory] = useMutation(DELETE_INVENTORY);
   const [createCategory] = useMutation(CREATE_CATEGORY);
@@ -46,32 +44,26 @@ export default function Inventory() {
   });
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [first, setFirst] = useState(0);
-  const [rows, setRows] = useState(10);
+  const [rows, setRows] = useState(5);
 
-  // Modal states
-  const [visible, setVisible] = useState(false);
+  //Category modal States
   const [categoryModalVisible, setcategoryModalVisible] = useState(false);
-  const [detaledViewModal, setdetaledViewModal] = useState(false);
   const [selectedCategory, setselectedCategory] = useState(null);
-  const [editingRow, setEditingRow] = useState(null);
-  const [orginalData, setorginalData] = useState({});
-  const [formData, setformData] = useState({});
   const [categoryRow, setcategoryRow] = useState({
     name: "",
     image: null,
   });
+
+  //Inventory modal States
+  const [visible, setVisible] = useState(false);
+  const [editingRow, setEditingRow] = useState({ name: "", category: "" });
+
+  //Detailedview of products each category modal states
+  const [detaledViewModal, setdetaledViewModal] = useState(false);
+
   const toast = useRef(null);
 
-  /* ---------- CRUD ---------- */
-  const addRow = () => {
-    setEditingRow({
-      name: "",
-      category: "",
-      _isNew: true,
-    });
-    setVisible(true);
-  };
-
+  //create inventory
   const saveRow = async () => {
     if (!editingRow.name?.trim() || !editingRow.category) {
       toast.current?.show({
@@ -83,46 +75,33 @@ export default function Inventory() {
     }
 
     try {
-      if (editingRow._isNew) {
-        // CREATE
-        await createInventory({
-          variables: {
-            name: editingRow.name,
-            category: editingRow.category,
-          },
-          update: (cache, { data }) => {
-            if (!data?.createInventory) return;
-            const existing = cache.readQuery({ query: GET_INVENTORIES }) || {
-              inventories: [],
-            };
-            cache.writeQuery({
-              query: GET_INVENTORIES,
-              data: {
-                inventories: [
-                  ...existing.inventories,
-                  data.createInventory.inventory,
-                ],
-              },
-            });
-          },
-        });
-      } else {
-        // UPDATE
-        const changes = getChangeFields();
-        if (Object.keys(changes).length > 0) {
-          await updateInventory({
-            variables: { id: formData.id, ...changes },
+      await createInventory({
+        variables: {
+          name: editingRow.name,
+          category: editingRow.category,
+        },
+        update: (cache, { data }) => {
+          if (!data?.createInventory) return;
+          const existing = cache.readQuery({ query: GET_INVENTORIES }) || {
+            inventories: [],
+          };
+          cache.writeQuery({
+            query: GET_INVENTORIES,
+            data: {
+              inventories: [
+                ...existing.inventories,
+                data.createInventory.inventory,
+              ],
+            },
           });
-        }
-      }
+        },
+      });
 
       setVisible(false);
       toast.current?.show({
         severity: "success",
         summary: "Saved",
-        detail: formData._isNew
-          ? "Inventory saved successfully"
-          : "Inventory edited successfully",
+        detail: "Inventory added successfully",
       });
     } catch (err) {
       toast.current?.show({
@@ -133,32 +112,112 @@ export default function Inventory() {
     }
   };
 
-  const resolveImageSrc = (image) => {
-    if (!image) return "";
-    if (image.startsWith("data:image")) {
-      return image;
+  //For create Category
+  const saveCategory = async () => {
+    if (!categoryRow.name?.trim()) {
+      toast.current?.show({
+        severity: "warn",
+        summary: "Validation",
+        detail: "Please fill in all required fields",
+      });
+      return;
     }
-    if (image.startsWith("http://") || image.startsWith("https://")) {
-      return image;
+    if (!categoryRow) return;
+    try {
+      if (categoryRow) {
+        await createCategory({
+          variables: { name: categoryRow.name, image: categoryRow.image },
+          update: (cache, { data }) => {
+            if (!data?.createCategory) return;
+            const existing = cache.readQuery({ query: GET_CATEGORIES }) || {
+              categories: [],
+            };
+            cache.writeQuery({
+              query: GET_CATEGORIES,
+              data: {
+                categories: [
+                  ...existing.categories,
+                  data.createCategory.category,
+                ],
+              },
+            });
+          },
+        });
+        setcategoryRow({ name: "", image: null });
+        toast.current?.show({
+          severity: "success",
+          summary: "Saved",
+          detail: "Category Added",
+        });
+      }
+    } catch (err) {
+      toast.current?.show({
+        severity: "error",
+        summary: "Error",
+        detail: err.message,
+      });
     }
-    return `${process.env.REACT_APP_API_URL || ""}${image}`;
   };
 
-  const categoryOptions = categoryLoading
-    ? [{ label: "Select Category", value: "" }]
-    : [
-        { label: "Select Category", value: "" },
-        ...(categoryData?.categories
-          .filter(
-            (cat, index, self) =>
-              cat && self.findIndex((c) => c.id === cat.id) === index
-          )
-          .map((cat) => ({
-            label: cat.name,
-            value: cat.id.toString(),
-          })) || []),
-      ];
+  //For upddating category (Inline edit)
+  const UpdateCategoryDetails = async (e) => {
+    try {
+      const changes = {};
+      for (const key in e.newData) {
+        if (e.newData[key] !== e.data[key]) {
+          changes[key] = e.newData[key];
+        }
+      }
 
+      if (Object.keys(changes).length > 0) {
+        await updateCategory({
+          variables: { id: e.newData.id, ...changes },
+        });
+        toast.current?.show({
+          severity: "success",
+          summary: "Updated",
+          detail: "Inventory updated successfully",
+        });
+      }
+    } catch (err) {
+      toast.current?.show({
+        severity: "error",
+        summary: "Error",
+        detail: err.message,
+      });
+    }
+  };
+
+  //For update inventory details
+  const UpdateInventoryDetails = async (e) => {
+    try {
+      const changes = {};
+      for (const key in e.newData) {
+        if (e.newData[key] !== e.data[key]) {
+          changes[key] = e.newData[key];
+        }
+      }
+
+      if (Object.keys(changes).length > 0) {
+        await updateInventory({
+          variables: { id: e.newData.id, ...changes },
+        });
+        toast.current?.show({
+          severity: "success",
+          summary: "Updated",
+          detail: "Inventory updated successfully",
+        });
+      }
+    } catch (err) {
+      toast.current?.show({
+        severity: "error",
+        summary: "Error",
+        detail: err.message,
+      });
+    }
+  };
+
+  //For deletion of both catgory and inventory
   const confirmDelete = (rowData, type) => {
     confirmDialog({
       message: `Delete "${rowData.name || "this item"}"? ${type}`,
@@ -190,71 +249,23 @@ export default function Inventory() {
     });
   };
 
-  const addCategoryRow = () => {
-    setcategoryRow({
-      name: "",
-      image: null,
-      _isNew: true,
-    });
-    setcategoryModalVisible(true);
-  };
+  //dropdownoptions in category select when adding a inventory
+  const categoryOptions = categoryLoading
+    ? [{ label: "Select Category", value: "" }]
+    : [
+        { label: "Select Category", value: "" },
+        ...(categoryData?.categories
+          .filter(
+            (cat, index, self) =>
+              cat && self.findIndex((c) => c.id === cat.id) === index
+          )
+          .map((cat) => ({
+            label: cat.name,
+            value: cat.id.toString(),
+          })) || []),
+      ];
 
-  const saveCategory = async () => {
-    console.log(categoryRow);
-    if (!categoryRow.name?.trim()) {
-      toast.current?.show({
-        severity: "warn",
-        summary: "Validation",
-        detail: "Please fill in all required fields",
-      });
-      return;
-    }
-    if (!categoryRow) return;
-    try {
-      if (categoryRow._isNew) {
-        await createCategory({
-          variables: { name: categoryRow.name, image: categoryRow.image },
-        });
-        setcategoryRow({ name: "", image: null });
-        // setcategoryModalVisible(false);
-        toast.current?.show({
-          severity: "success",
-          summary: "Saved",
-          detail: "Row saved",
-        });
-        categoryFetch();
-      }
-    } catch (err) {
-      toast.current?.show({
-        severity: "error",
-        summary: "Error",
-        detail: err.message,
-      });
-    }
-  };
-
-  /* ---------- Helpers ---------- */
-  const getStatus = (count) => {
-    if (count === 0) return "UNAVAILABLE";
-    return "AVAILABLE";
-  };
-
-  const statusBody = (rowData) => {
-    const status = getStatus(rowData.available);
-    const classes =
-      status === "AVAILABLE"
-        ? "bg-green-100 text-green-800"
-        : "bg-red-100 text-red-800";
-
-    return (
-      <span
-        className={`inline-block px-2 py-1 rounded text-xs font-medium ${classes}`}
-      >
-        {status}
-      </span>
-    );
-  };
-
+  //searching filteration
   const onGlobalFilterChange = (e) => {
     const value = e.target.value;
     const _filters = { ...filters };
@@ -269,6 +280,7 @@ export default function Inventory() {
     setRows(e.rows);
   };
 
+  //for inline edit text editor openup a inut field
   const textEditor = (options) => {
     return (
       <InputText
@@ -282,26 +294,23 @@ export default function Inventory() {
 
   return (
     <section className="w-full min-h-screen px-5 py-5 bg-[#f5f5f5]">
-      <Toast ref={toast} />
-      <ConfirmDialog />
-
       <div className="w-full bg-white rounded-lg shadow-md p-4 mb-4 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex flex-col md:flex-row items-center md:items-start justify-between w-full gap-3">
+        <div className="flex flex-col md:flex-row items-center md:items-center justify-between w-full gap-3">
           <div className="text-center md:text-left">
             <h1 className="font-bold text-[16px] md:text-[22px]">INVENTORY</h1>
             <p className="text-sm text-gray-500">
               Manage inventory, add/edit inventory
             </p>
           </div>
-          <div className="flex flex-wrap gap-3 justify-center md:justify-start w-full md:w-auto">
+          <div className="h-full flex flex-wrap gap-3 items-center justify-center md:justify-start w-full md:w-auto">
             <button
-              onClick={addRow}
+              onClick={() => setVisible(true)}
               className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center flex-shrink-0"
             >
               Add Inventory
             </button>
             <button
-              onClick={addCategoryRow}
+              onClick={() => setcategoryModalVisible(true)}
               className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[rgb(224,21,20)] hover:bg-[#ff2828] flex items-center justify-center flex-shrink-0"
             >
               Add Category
@@ -336,18 +345,19 @@ export default function Inventory() {
                 <i className="bi bi-search  absolute left-[10px] top-[50%] translate-y-[-50%] text-[14px] text-black"></i>
               </div>
             </div>
+            {/* main landing datatable */}
             <DataTable
-              value={categoryData.categories}
+              value={categoryData.categories || []}
               dataKey="id"
-              paginator
-              rows={rows}
-              alwaysShowPaginator
+              alwaysShowPaginator={false}
               paginatorClassName="mt-3"
+              paginator={categoryData?.categories?.length > 5}
+              rowsPerPageOptions={[5, 10, 20, 50]}
+              rows={rows}
               first={first}
               removableSort
               size="small"
               onPage={onPage}
-              rowsPerPageOptions={[5, 10, 20, 50]}
               filters={filters}
               globalFilterFields={["name"]}
               emptyMessage="No inventory found."
@@ -366,7 +376,7 @@ export default function Inventory() {
                 header="S.No"
                 headerClassName="font-[poppins]"
                 body={(rowData, options) => options.rowIndex + 1}
-                alignHeader={"center"}
+                alignHeader={"DD"}
                 style={{
                   width: "5%",
                   textAlign: "center",
@@ -424,6 +434,7 @@ export default function Inventory() {
                   textAlign: "center",
                 }}
               />
+
               <Column
                 field="total"
                 header="Total Stock"
@@ -434,6 +445,7 @@ export default function Inventory() {
                   textAlign: "center",
                 }}
               />
+
               <Column
                 field="available"
                 header="Avail Stock"
@@ -445,23 +457,37 @@ export default function Inventory() {
                   textAlign: "center",
                 }}
               />
+
               <Column
                 header="Status"
                 headerClassName="font-[poppins]"
-                body={statusBody}
+                body={(rowData) => {
+                  return (
+                    <div
+                      className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                        rowData.available > 0
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {rowData.available > 0 ? "AVAILABLE" : "UNAVAILABLE"}
+                    </div>
+                  );
+                }}
                 alignHeader={"center"}
                 style={{
-                  // width: "15%",
+                  width: "15%",
                   textAlign: "center",
                 }}
               />
-            </DataTable>{" "}
+            </DataTable>
           </>
         )}
       </div>
 
+      {/* Inventory adding modal */}
       <Dialog
-        header={editingRow?._isNew ? "Add Inventory" : "Edit Inventory"}
+        header={"Add Inventory"}
         headerClassName="!font-[poppins]"
         visible={visible}
         draggable={false}
@@ -517,13 +543,14 @@ export default function Inventory() {
                   });
                 }}
                 placeholder="Select a category"
-                className="w-full !font-[poppins] placeholder:!text-sm "
+                className="w-full !font-[poppins] placeholder:!text-sm [&>.p-dropdown-label]:!p-1.5 !px-2"
               />
             </div>
           </div>
         )}
       </Dialog>
 
+      {/* Category Adding modal */}
       <Dialog
         header={"Add Category"}
         headerClassName="!font-[poppins]"
@@ -559,8 +586,6 @@ export default function Inventory() {
               <label className="block text-sm font-medium mb-1">
                 Product Image
               </label>
-
-              {/* Styled file input */}
               <label className="w-full flex items-center justify-between px-3 py-2 border border-gray-300 rounded-md cursor-pointer bg-white hover:bg-gray-50 text-sm">
                 <span className="text-gray-600">
                   {categoryRow.image ? "Change Image" : "Choose an image"}
@@ -583,12 +608,10 @@ export default function Inventory() {
                   }}
                 />
               </label>
-
-              {/* Preview */}
               {categoryRow.image && (
                 <div className="mt-3">
                   <img
-                    src={resolveImageSrc(categoryRow.image)}
+                    src={categoryRow.image}
                     alt="preview"
                     className="w-25 h-25 sm:w-30 sm:h-30 object-cover rounded-md border border-gray-200"
                   />
@@ -596,7 +619,6 @@ export default function Inventory() {
               )}
             </div>
           </div>
-
           {categoryLoading || categoryError ? (
             categoryLoading ? (
               <p>Loading inventories...</p>
@@ -610,10 +632,10 @@ export default function Inventory() {
                 dataKey="id"
                 rows={10}
                 first={first}
-                removableSort // <-- update state
+                removableSort
                 size="small"
                 stripedRows
-                onPage={onPage} //for when adding new coloumn new added will be listed at last
+                onPage={onPage}
                 filters={filters}
                 emptyMessage="No categories listed."
                 tableStyle={{
@@ -625,37 +647,7 @@ export default function Inventory() {
                 rowEditorInitIcon="bi bi-pencil cursor-pointer text-blue-500 p-2 rounded bg-blue-100"
                 rowEditorSaveIcon="bi bi-check-lg cursor-pointer text-green-600 p-2 rounded bg-green-100"
                 rowEditorCancelIcon="bi bi-x-lg cursor-pointer text-red-500 p-2 rounded bg-red-100"
-                onRowEditInit={(e) => setorginalData(e.data)}
-                onRowEditCancel={() => {
-                  setorginalData(null);
-                }}
-                onRowEditSave={async (e) => {
-                  try {
-                    const changes = {};
-                    for (const key in e.newData) {
-                      if (e.newData[key] !== e.data[key]) {
-                        changes[key] = e.newData[key];
-                      }
-                    }
-
-                    if (Object.keys(changes).length > 0) {
-                      await updateCategory({
-                        variables: { id: e.newData.id, ...changes },
-                      });
-                      toast.current?.show({
-                        severity: "success",
-                        summary: "Updated",
-                        detail: "Inventory updated successfully",
-                      });
-                    }
-                  } catch (err) {
-                    toast.current?.show({
-                      severity: "error",
-                      summary: "Error",
-                      detail: err.message,
-                    });
-                  }
-                }}
+                onRowEditSave={(e) => UpdateCategoryDetails(e)}
               >
                 <Column
                   header="S.No"
@@ -715,6 +707,7 @@ export default function Inventory() {
         </div>
       </Dialog>
 
+      {/* Detailled view of inventory category wise */}
       <Dialog
         header={selectedCategory?.name}
         headerClassName="!font-[poppins]"
@@ -754,37 +747,7 @@ export default function Inventory() {
                 emptyMessage="No products listed yet...."
                 tableStyle={{ minWidth: "30rem", tableLayout: "fixed" }}
                 className="min-h-full h-[34vh] overflow-auto !text-[14px] !font-[poppins] mt-5"
-                // onRowEditInit={(e) => setorginalData(e.data)}
-                onRowEditCancel={() => {
-                  setorginalData(null);
-                }}
-                onRowEditSave={async (e) => {
-                  try {
-                    const changes = {};
-                    for (const key in e.newData) {
-                      if (e.newData[key] !== e.data[key]) {
-                        changes[key] = e.newData[key];
-                      }
-                    }
-
-                    if (Object.keys(changes).length > 0) {
-                      await updateInventory({
-                        variables: { id: e.newData.id, ...changes },
-                      });
-                      toast.current?.show({
-                        severity: "success",
-                        summary: "Updated",
-                        detail: "Inventory updated successfully",
-                      });
-                    }
-                  } catch (err) {
-                    toast.current?.show({
-                      severity: "error",
-                      summary: "Error",
-                      detail: err.message,
-                    });
-                  }
-                }}
+                onRowEditSave={(e) => UpdateInventoryDetails(e)}
               >
                 <Column
                   header="S.No"
@@ -833,7 +796,6 @@ export default function Inventory() {
                 />
 
                 <Column
-                  field="status"
                   header="Status"
                   headerClassName="font-[poppins]"
                   body={(rowData) => (
@@ -858,6 +820,8 @@ export default function Inventory() {
           )}
         </div>
       </Dialog>
+      <Toast ref={toast} />
+      <ConfirmDialog />
     </section>
   );
 }

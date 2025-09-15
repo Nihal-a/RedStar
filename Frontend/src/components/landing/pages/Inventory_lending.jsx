@@ -4,78 +4,41 @@ import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { InputTextarea } from "primereact/inputtextarea";
-import { AutoComplete } from "primereact/autocomplete";
 import { Toast } from "primereact/toast";
 import { ConfirmDialog, confirmDialog } from "primereact/confirmdialog";
 import { Dialog } from "primereact/dialog";
 import { FilterMatchMode } from "primereact/api";
 import { Calendar } from "primereact/calendar";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-
-const ProductService = {
-  getProductsMini() {
-    return Promise.resolve([
-      {
-        id: 1,
-        product: "Oxygen cylindar",
-        name: "Mohammed Nihal Areekkadan",
-        mobilenumber: "9846080265",
-        address: " Areekkadan(h), punnathala (p.o),",
-        lendeddate: "Wed Sep 21 2025 00:00:00 GMT+0530 (India Standard Time)",
-        returneddate: "-",
-        remarks: "-",
-        status: "Pending",
-      },
-      {
-        id: 2,
-        product: "Wheel Chair",
-        name: "Swalih",
-        mobilenumber: "8075244365",
-        address: "  kundan(h), punnathala (p.o)",
-        lendeddate: "Wed Sep 08 2025 00:00:00 GMT+0530 (India Standard Time)",
-        returneddate: "",
-        remarks: "-",
-        status: "Pending",
-      },
-      {
-        id: 3,
-        product: "Water Bed",
-        name: "Sinan",
-        mobilenumber: "6282856560",
-        address: " kundan(h), punnathala (p.o)",
-        lendeddate: "Wed Sep 03 2025 00:00:00 GMT+0530 (India Standard Time)",
-        returneddate: "Wed Sep 02 2025 00:00:00 GMT+0530 (India Standard Time)",
-        remarks: "Small leakage",
-        status: "Returned",
-      },
-    ]);
-  },
-};
+import { useMutation, useQuery } from "@apollo/client/react";
+import { GET_CATEGORIES, GET_INVENTORY_LENDING } from "../../graphql/queries";
+import { format } from "date-fns";
+import { Dropdown } from "primereact/dropdown";
+import { ADD_INVENTORY_LENDING } from "../../graphql/mutations";
 
 export default function InventoryLending() {
+  //graphql
+  const { data, loading, error, refetch } = useQuery(GET_INVENTORY_LENDING);
+  console.log(data);
+  const {
+    data: categoryData,
+    loading: categoryLoading,
+    error: categoryError,
+    refetch: categoryFetch,
+  } = useQuery(GET_CATEGORIES);
+
+  const [addInventoryLending] = useMutation(ADD_INVENTORY_LENDING);
+
   const [products, setProducts] = useState([]);
   const [filters, setFilters] = useState({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    lendeddate: { value: null, matchMode: FilterMatchMode.DATE_IS },
   });
   const [globalFilterValue, setGlobalFilterValue] = useState("");
-  const [selectedProducts, setSelectedProducts] = useState([]);
   const [first, setFirst] = useState(0);
   const [rows, setRows] = useState(8);
-
-  const data = [
-    "Vaikom Muhammad Basheer",
-    "Hobbit",
-    "Hamlet",
-    "Hunger Games",
-    "Head First Java",
-  ];
 
   // Modal states
   const [visible, setVisible] = useState(false);
   const [editingRow, setEditingRow] = useState(null);
-  const [authorSuggestions, setAuthorSuggestions] = useState([]);
 
   const [confirmVisible, setconfirmVisible] = useState(false);
   const [returnRemarks, setReturnRemarks] = useState("");
@@ -84,90 +47,13 @@ export default function InventoryLending() {
 
   const toast = useRef(null);
 
-  useEffect(() => {
-    ProductService.getProductsMini().then((data) => {
-      const normalized = data.map((p, idx) => ({
-        ...p,
-        id: p.id ?? idx + 1,
-        lendeddate:
-          p.lendeddate && p.lendeddate !== "-" ? new Date(p.lendeddate) : null,
-        returneddate:
-          p.returneddate && p.returneddate !== "-"
-            ? new Date(p.returneddate)
-            : null,
-      }));
-      setProducts(normalized);
-    });
-  }, []);
-
-  /* ---------- PDF export ---------- */
-  const exportPDF = () => {
-    const doc = new jsPDF("p", "pt");
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(18);
-    doc.setTextColor(0, 0, 128);
-    doc.text(
-      "Inventory lending Report",
-      doc.internal.pageSize.getWidth() / 2,
-      40,
-      {
-        align: "center",
-      }
-    );
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    doc.setTextColor(0, 0, 0);
-    doc.text("Generated on: 04 Sep 2025", 40, 70);
-
-    const headers = [
-      ["S.No", "Name", "Product", "Address", "Date", "Remarks", "Status"],
-    ];
-    const data = products.map((p, index) => [
-      index + 1,
-      p.name || "—",
-      p.product || "—",
-      p.address ?? "_",
-      p.date ?? "_",
-      p.remarks ?? "_",
-      p.status ?? "_",
-    ]);
-
-    autoTable(doc, {
-      head: headers,
-      headStyles: {
-        fillColor: [224, 21, 20],
-        textColor: 255,
-        fontStyle: "bold",
-        halign: "center",
-      },
-      body: data,
-      startY: 50,
-      margin: { left: 32 },
-      theme: "grid",
-      styles: {
-        fontSize: 10,
-        cellWidth: "wrap",
-        overflow: "linebreak",
-      },
-      columnStyles: {
-        1: { cellWidth: 80 },
-        2: { cellWidth: 100 },
-        3: { cellWidth: 130 },
-        5: { cellWidth: 80 },
-      },
-    });
-
-    doc.save("inventorylending.pdf");
-  };
-
   /* ---------- CRUD ---------- */
   const addRow = () => {
     setEditingRow({
       id: Date.now(),
-      product: "",
+      inventory: "",
       name: "",
-      mobilenumber: "",
+      mobileNumber: "",
       address: "",
       lendeddate: null,
       returneddate: null,
@@ -208,13 +94,13 @@ export default function InventoryLending() {
     setconfirmVisible(true);
   };
 
-  const saveRow = () => {
+  const saveRow = async () => {
+    console.log(editingRow);
     if (
       !editingRow.name?.trim() ||
-      !editingRow.product?.trim() ||
-      !editingRow.mobilenumber?.trim() ||
+      // !editingRow.inventory ||
       !editingRow.address?.trim() ||
-      !editingRow.lendeddate
+      !editingRow.lendedDate
     ) {
       toast.current?.show({
         severity: "warn",
@@ -224,55 +110,87 @@ export default function InventoryLending() {
       return;
     }
 
-    if (!editingRow) return;
-
-    let updated;
-    if (editingRow._isNew) {
-      const newRow = { ...editingRow };
-      delete newRow._isNew;
-      updated = [newRow, ...products];
-    } else {
-      updated = products.map((p) => (p.id === editingRow.id ? editingRow : p));
+    if (!/^\d{10}$/.test(editingRow.mobileNumber)) {
+      toast.current.show({
+        severity: "warn",
+        summary: "Validation",
+        detail: "Mobile number must be exactly 10 digits (numbers only).",
+      });
+      return;
     }
 
-    setProducts(updated);
-    setVisible(false);
-    toast.current?.show({
-      severity: "success",
-      summary: "Saved",
-      detail: "Row saved",
-    });
+    if (!editingRow) return;
+
+    const normalizedLendedDate = editingRow.lendedDate
+      ? editingRow.lendedDate.toISOString().split("T")[0]
+      : null;
+    console.log(normalizedLendedDate);
+    try {
+      // await addInventoryLending({
+      //   variables: {
+      //     name: editingRow.name,
+      //     inventory: "47", // assuming ID
+      //     mobileNumber: editingRow.mobileNumber,
+      //     address: editingRow.address,
+      //     lendedDate: normalizedLendedDate,
+      //     remarks: editingRow.remarks || "",
+      //   },
+      //   update: (cache, { data }) => {
+      //     if (!data?.addInventoryLending) return;
+      //     const existing = cache.readQuery({
+      //       query: GET_INVENTORY_LENDING,
+      //     }) || { inventoryLending: [] };
+
+      //     cache.writeQuery({
+      //       query: GET_INVENTORY_LENDING,
+      //       data: {
+      //         inventoryLending: [
+      //           ...existing.inventoryLending,
+      //           data.addInventoryLending.inventory,
+      //         ],
+      //       },
+      //     });
+      //   },
+      // });
+      await addInventoryLending({
+        variables: {
+          name: editingRow.name,
+          inventory: editingRow.inventory, // ID from dropdown
+          mobile_number: editingRow.mobileNumber,
+          address: editingRow.address,
+          lended_date: normalizedLendedDate, // "YYYY-MM-DD"
+          remarks: editingRow.remarks || "",
+        },
+      });
+      setVisible(false);
+      toast.current?.show({
+        severity: "success",
+        summary: "Saved",
+        detail: "Inventory added successfully",
+      });
+    } catch (err) {
+      toast.current?.show({
+        severity: "error",
+        summary: "Error",
+        detail: err.message,
+      });
+    }
   };
 
-  const getStatus = (count) => {
-    if (count > 10) return "INSTOCK";
-    if (count > 0) return "LOWSTOCK";
-    return "OUTOFSTOCK";
-  };
-
-  const statusBody = (rowData) => {
-    const status = rowData.status;
-    const classes =
-      status === "Pending"
-        ? "bg-red-100 text-red-800"
-        : "bg-green-100 text-green-800";
-
-    return (
-      <span
-        className={`inline-block px-2 py-1 rounded text-xs font-medium ${classes}`}
-      >
-        {status}
-      </span>
-    );
-  };
-
-  const searchAuthor = (event) => {
-    let query = event.query.toLowerCase();
-    let filtered = data.filter((item) => item.toLowerCase().includes(query));
-    setAuthorSuggestions(filtered);
-  };
-
-  const serialBody = (rowData, options) => first + options.rowIndex + 1;
+  const categoryOptions = categoryLoading
+    ? [{ label: "Select Category", value: "" }]
+    : [
+        { label: "Select Category", value: "" },
+        ...(categoryData?.categories
+          .filter(
+            (cat, index, self) =>
+              cat && self.findIndex((c) => c.id === cat.id) === index
+          )
+          .map((cat) => ({
+            label: cat.name,
+            value: cat.id.toString(),
+          })) || []),
+      ];
 
   const onGlobalFilterChange = (e) => {
     const value = e.target.value;
@@ -290,9 +208,6 @@ export default function InventoryLending() {
 
   return (
     <section className="w-full min-h-screen px-5 py-5 bg-[#f5f5f5]">
-      <Toast ref={toast} />
-      <ConfirmDialog />
-
       <div className="w-full  bg-white rounded-lg shadow-md p-4 mb-4 flex  items-center justify-between ">
         <div className="w-full flex flex-col md:flex-row items-center justify-between gap-3">
           <div className="">
@@ -310,9 +225,9 @@ export default function InventoryLending() {
             >
               Add Record
             </button>
-          
+
             <button
-              onClick={exportPDF}
+              // onClick={exportPDF}
               className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center cursor-pointer"
             >
               <i class="bi bi-file-earmark-pdf pr-1 "></i>
@@ -323,186 +238,218 @@ export default function InventoryLending() {
       </div>
 
       <div className="bg-white rounded-lg shadow-md p-4 ">
-        <div className="w-full p-5 bg-[#F9FAFB] mb-3 rounded-sm border-1 border-[#e6e6e6] flex justify-between">
-          <div className="opacity-0 ">o</div>
-          <div className="relative ">
-            <input
-              value={globalFilterValue}
-              onChange={onGlobalFilterChange}
-              type="text"
-              placeholder="Search..."
-              className="w-full py-2 md:pl-8 pl-2 pr-3 text-sm rounded-md ring-1 ring-gray-300  focus:outline-none"
-            />
-            <i className="bi bi-search hidden md:block absolute left-[10px] top-[50%] translate-y-[-50%] text-[14px] text-black"></i>
-          </div>
-        </div>
-
-        <DataTable
-          value={products}
-          dataKey="id"
-          paginator
-          rows={10}
-          alwaysShowPaginator={true}
-          paginatorClassName="mt-3 "
-          removableSort
-          size="small"
-          stripedRows
-          first={first}
-          selection={selectedProducts} // <-- bind selected rows
-          onSelectionChange={(e) => setSelectedProducts(e.value)} // <-- update state
-          selectionMode="multiple"
-          rowClassName={(rowData) =>
-            selectedProducts?.some((p) => p.id === rowData.id)
-              ? "!bg-[#e0141415] !text-[#E01514] !"
-              : ""
-          }
-          onPage={onPage} //for when adding new coloumn new added will be listed at last
-          rowsPerPageOptions={[5, 10, 20, 30]}
-          filters={filters}
-          globalFilterFields={[
-            "name",
-            "product",
-            "address",
-            "mobilenumber",
-            "lendeddate",
-          ]}
-          emptyMessage="No Books found."
-          tableStyle={{ minWidth: "70rem", tableLayout: "fixed" }}
-          className="min-h-full w-full h-[72vh] overflow-auto !text-[14px] !font-[poppins]"
-        >
-          <Column
-            selectionMode="multiple"
-            headerStyle={{ width: "2%" }}
-            className=""
-          />
-          <Column
-            header="S.No"
-            headerClassName="font-[poppins]"
-            body={serialBody}
-            alignHeader={"center"}
-            style={{
-              width: "5%",
-              textAlign: "center",
-            }}
-          />
-          <Column
-            header="Actions"
-            headerClassName="font-[poppins]"
-            body={(rowData) => (
-              <div className="w-full flex items-center justify-center gap-2">
-                <button
-                  className=" !bg-blue-500 !text-white flex items-center justify-center rounded-[6px] p-2.5 cursor-pointer"
-                  onClick={() => {
-                    setEditingRow(rowData);
-                    setVisible(true);
-                  }}
-                >
-                  <i class="bi bi-pencil leading-none"></i>
-                </button>
-                <button
-                  className=" !bg-red-500 !text-white flex items-center justify-center rounded-[6px] p-2.5 cursor-pointer"
-                  onClick={() => confirmDelete(rowData)}
-                >
-                  <i class="bi bi-trash leading-none"></i>
-                </button>
-                <button
-                  className=" !bg-green-500 !text-white flex items-center justify-center rounded-[6px] p-2.5 cursor-pointer"
-                  onClick={() => confirmReturn(rowData)}
-                >
-                  <i class="bi bi-check-lg leading-none"></i>
-                </button>
+        {loading || error ? (
+          loading ? (
+            <p>Loading records...</p>
+          ) : (
+            <p>Error: {error.message}</p>
+          )
+        ) : (
+          <>
+            <div className="w-full p-5 bg-[#F9FAFB] mb-3 rounded-sm border-1 border-[#e6e6e6] flex justify-between">
+              <div className="opacity-0 ">o</div>
+              <div className="relative ">
+                <input
+                  value={globalFilterValue}
+                  onChange={onGlobalFilterChange}
+                  type="text"
+                  placeholder="Search..."
+                  className="w-full py-2 md:pl-8 pl-2 pr-3 text-sm rounded-md ring-1 ring-gray-300  focus:outline-none"
+                />
+                <i className="bi bi-search hidden md:block absolute left-[10px] top-[50%] translate-y-[-50%] text-[14px] text-black"></i>
               </div>
-            )}
-            alignHeader={"center"}
-            style={{
-              width: "10%",
-              textAlign: "center",
-            }}
-          />
-          <Column
-            field="name"
-            header="Name"
-            headerClassName="font-[poppins]"
-            alignHeader={"center"}
-            style={{
-              textAlign: "center",
-            }}
-          />
-          <Column
-            field="mobilenumber"
-            header="Mobile Number"
-            headerClassName="font-[poppins]"
-            alignHeader={"center"}
-            style={{
-              textAlign: "center",
-            }}
-          />
-          <Column
-            field="product"
-            header="Product"
-            headerClassName="font-[poppins]"
-            alignHeader={"center"}
-            style={{
-              textAlign: "center",
-            }}
-          />
-          <Column
-            field="address"
-            header="Address"
-            headerClassName="font-[poppins]"
-            alignHeader={"center"}
-            style={{
-              textAlign: "center",
-            }}
-          />
-          <Column
-            field="lendeddate"
-            header="Lended Date"
-            headerClassName="font-[poppins]"
-            sortable
-            body={(row) =>
-              row.lendeddate ? row.lendeddate.toLocaleDateString("en-GB") : "-"
-            }
-            alignHeader={"center"}
-            style={{
-              width: "10%",
-              textAlign: "center",
-            }}
-          />
-          <Column
-            field="returneddate"
-            header="Return Date"
-            headerClassName="font-[poppins]"
-            alignHeader={"center"}
-            body={(row) =>
-              row.returneddate
-                ? row.returneddate.toLocaleDateString("en-GB")
-                : "-"
-            }
-            style={{
-              width: "10%",
-              textAlign: "center",
-            }}
-          />
-          <Column
-            field="remarks"
-            header="Remarks"
-            headerClassName="font-[poppins]"
-            alignHeader={"center"}
-            style={{
-              textAlign: "center",
-            }}
-          />
-          <Column
-            header="Status"
-            headerClassName="font-[poppins]"
-            body={statusBody}
-            alignHeader={"center"}
-            style={{
-              textAlign: "center",
-            }}
-          />
-        </DataTable>
+            </div>
+
+            <DataTable
+              value={data.inventoryLending}
+              dataKey="id"
+              alwaysShowPaginator={false}
+              paginatorClassName="mt-3"
+              paginator={data.inventoryLending?.length > 5}
+              rowsPerPageOptions={[5, 10, 20, 50]}
+              rows={rows}
+              removableSort
+              size="small"
+              stripedRows
+              first={first}
+              onPage={onPage}
+              filters={filters}
+              globalFilterFields={[
+                "name",
+                "product",
+                "address",
+                "mobilenumber",
+                "lendeddate",
+              ]}
+              emptyMessage="No Records found."
+              tableStyle={{ minWidth: "70rem", tableLayout: "fixed" }}
+              className="min-h-full w-full h-[72vh] overflow-auto !text-[14px] !font-[poppins]"
+            >
+              <Column
+                header="S.No"
+                headerClassName="font-[poppins]"
+                body={(rowData, options) => first + options.rowIndex + 1}
+                alignHeader={"center"}
+                style={{
+                  width: "5%",
+                  textAlign: "center",
+                }}
+              />
+              <Column
+                header="Actions"
+                headerClassName="font-[poppins]"
+                body={(rowData) => (
+                  <div className="w-full flex items-center justify-center gap-2">
+                    <button
+                      className=" !bg-blue-500 !text-white flex items-center justify-center rounded-[6px] p-2.5 cursor-pointer"
+                      onClick={() => {
+                        setEditingRow({
+                          ...rowData,
+                          category:
+                            rowData.inventory?.category?.id?.toString() || "",
+                        });
+                        setVisible(true);
+                      }}
+                    >
+                      <i class="bi bi-pencil leading-none"></i>
+                    </button>
+                    <button
+                      className=" !bg-red-500 !text-white flex items-center justify-center rounded-[6px] p-2.5 cursor-pointer"
+                      onClick={() => confirmDelete(rowData)}
+                    >
+                      <i class="bi bi-trash leading-none"></i>
+                    </button>
+                    <button
+                      className=" !bg-green-500 !text-white flex items-center justify-center rounded-[6px] p-2.5 cursor-pointer"
+                      onClick={() => confirmReturn(rowData)}
+                    >
+                      <i class="bi bi-check-lg leading-none"></i>
+                    </button>
+                  </div>
+                )}
+                // body={(rowData) => (
+                //   <div className="flex gap-2">
+                //     <i
+                //       className="bi bi-trash  cursor-pointer text-red-500 p-2 rounded bg-red-100"
+                //       // onClick={() => confirmDelete(rowData, "category")}
+                //     ></i>
+                //   </div>
+                // )}
+                alignHeader={"center"}
+                style={{
+                  width: "10%",
+                  textAlign: "center",
+                }}
+              />
+              <Column
+                field="name"
+                header="Name"
+                headerClassName="font-[poppins]"
+                alignHeader={"center"}
+                style={{
+                  textAlign: "center",
+                }}
+              />
+              <Column
+                field="mobileNumber"
+                header="Mobile Number"
+                headerClassName="font-[poppins]"
+                alignHeader={"center"}
+                style={{
+                  textAlign: "center",
+                }}
+              />
+              <Column
+                body={(rowData) => (
+                  <div>
+                    <span className="">
+                      {rowData.inventory?.category?.name}
+                    </span>
+                    <br />
+                    <span className="text-[12px]">
+                      {rowData.inventory?.name}
+                    </span>
+                  </div>
+                )}
+                header="Product"
+                headerClassName="font-[poppins]"
+                alignHeader={"center"}
+                style={{
+                  textAlign: "center",
+                }}
+              />
+              <Column
+                field="address"
+                header="Address"
+                headerClassName="font-[poppins]"
+                alignHeader={"center"}
+                style={{
+                  textAlign: "center",
+                }}
+              />
+              <Column
+                field="lendedDate"
+                header="Lended Date"
+                headerClassName="font-[poppins]"
+                sortable
+                // body={(rowData) => rowData.lendedDate}
+                body={(rowData) =>
+                  format(new Date(rowData.lendedDate), "dd-MM-yy")
+                }
+                alignHeader={"center"}
+                style={{
+                  width: "10%",
+                  textAlign: "center",
+                }}
+              />
+              <Column
+                field="returneddate"
+                header="Return Date"
+                headerClassName="font-[poppins]"
+                alignHeader={"center"}
+                body={(row) =>
+                  row.returneddate
+                    ? row.returneddate.toLocaleDateString("en-GB")
+                    : "-"
+                }
+                style={{
+                  width: "10%",
+                  textAlign: "center",
+                }}
+              />
+              <Column
+                field="remarks"
+                header="Remarks"
+                headerClassName="font-[poppins]"
+                alignHeader={"center"}
+                style={{
+                  textAlign: "center",
+                }}
+              />
+              <Column
+                header="Status"
+                headerClassName="font-[poppins]"
+                body={(rowData) => {
+                  return (
+                    <div
+                      className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                        rowData.status
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {rowData.status ? "RETURNED" : "PENDING"}
+                    </div>
+                  );
+                }}
+                alignHeader={"center"}
+                style={{
+                  textAlign: "center",
+                }}
+              />
+            </DataTable>
+          </>
+        )}
       </div>
 
       {/* Edit/Add Modal */}
@@ -555,14 +502,14 @@ export default function InventoryLending() {
                 Mobile Number*
               </label>
               <InputText
-                value={editingRow.mobilenumber}
+                value={editingRow.mobileNumber}
                 placeholder="Type lender mobile number..."
                 onChange={(e) => {
                   const val = e.target.value;
                   if (/^\d{0,10}$/.test(val))
                     setEditingRow({
                       ...editingRow,
-                      mobilenumber: e.target.value,
+                      mobileNumber: e.target.value,
                     });
                 }}
                 className="w-full placeholder:text-sm !p-1.5 !font-[poppins] !px-3"
@@ -571,19 +518,25 @@ export default function InventoryLending() {
 
             <div>
               <label className="block text-sm font-medium mb-1 !font-[poppins]">
-                Product*
+                Product*{editingRow?.inventory?.category?.name}
               </label>
-              <AutoComplete
-                value={editingRow.product}
-                suggestions={authorSuggestions}
-                completeMethod={searchAuthor}
-                onChange={(e) =>
-                  setEditingRow({ ...editingRow, product: e.value })
-                }
-                placeholder="Select product..."
-                className="w-full "
-                inputClassName="w-full placeholder:text-sm !p-1.5 !font-[poppins] !px-3"
-                panelClassName=""
+              <Dropdown
+                value={editingRow.category}
+                options={categoryOptions}
+                onChange={(e) => {
+                  setEditingRow({
+                    ...editingRow,
+                    category: e.value, // ✅ keep only id here
+                  });
+                }}
+                onSelect={(e) => {
+                  setEditingRow({
+                    ...editingRow,
+                    category: e.value.category,
+                  });
+                }}
+                placeholder="Select a category"
+                className="w-full !font-[poppins] placeholder:!text-sm [&>.p-dropdown-label]:!p-1.5 !px-2"
               />
             </div>
             <div>
@@ -599,38 +552,52 @@ export default function InventoryLending() {
                 className="w-full placeholder:text-sm !p-1.5 !font-[poppins] !px-3"
               />
             </div>
-            <div className="flex justify-center gap-2">
+            <div className="flex justify-between gap-2">
               <div className="flex flex-col w-[50%]">
                 <label className="block text-sm font-medium mb-1 !font-[poppins]">
                   Lended Date*
                 </label>
                 <Calendar
                   inputClassName="!p-1"
-                  value={editingRow.lendeddate}
+                  value={
+                    editingRow.lendedDate
+                      ? new Date(editingRow.lendedDate)
+                      : null
+                  }
                   className=" placeholder:text-sm  !font-[poppins] !p-0"
                   onChange={(e) =>
-                    setEditingRow({ ...editingRow, lendeddate: e.value })
+                    setEditingRow({ ...editingRow, lendedDate: e.value })
                   }
                   showButtonBar
                   maxDate={new Date()}
+                  dateFormat="dd-mm-yy"
                 />
               </div>
-              <div className="flex flex-col w-[50%]">
-                {" "}
-                <label className="block text-sm font-medium mb-1 !font-[poppins]">
-                  Returned Date
-                </label>
-                <Calendar
-                  inputClassName="!p-1"
-                  value={editingRow.returneddate}
-                  className=" placeholder:text-sm  !font-[poppins] !p-0"
-                  onChange={(e) =>
-                    setEditingRow({ ...editingRow, returneddate: e.value })
-                  }
-                  showButtonBar
-                  maxDate={new Date()}
-                />
-              </div>
+              {editingRow?._isNew ? (
+                ""
+              ) : (
+                <div className="flex flex-col w-[50%]">
+                  <label className="block text-sm font-medium mb-1 !font-[poppins]">
+                    Returned Date
+                  </label>
+                  <Calendar
+                    inputClassName="!p-1"
+                    value={editingRow.returnedDate}
+                    className=" placeholder:text-sm  !font-[poppins] !p-0"
+                    onChange={(e) =>
+                      setEditingRow({ ...editingRow, returnedDate: e.value })
+                    }
+                    showButtonBar
+                    minDate={
+                      editingRow.lendedDate
+                        ? new Date(editingRow.lendedDate)
+                        : null
+                    }
+                    maxDate={new Date()}
+                    dateFormat="dd-mm-yy"
+                  />
+                </div>
+              )}
             </div>
 
             <div>
@@ -712,6 +679,8 @@ export default function InventoryLending() {
         }}
         reject={() => setReturnRemarks("")}
       />
+      <Toast ref={toast} />
+      <ConfirmDialog />
     </section>
   );
 }

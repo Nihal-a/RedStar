@@ -54,7 +54,7 @@ class Inventory(models.Model):
 
 class InventoryLending(models.Model):
     name = models.CharField(max_length=100, null=False, blank=False)
-    mobile_number = models.IntegerField( null=False, blank=False )
+    mobile_number = models.CharField(max_length=15, null=False, blank=False)
     inventory = models.ForeignKey(Inventory, on_delete=models.CASCADE)
     address = models.CharField(max_length=200, null=False, blank=False)
     lended_date = models.DateField(null=False, blank=False)
@@ -79,4 +79,3 @@ class BooksLending(models.Model):
     return_date = models.DateField(null=True, blank=True)
     remarks = models.CharField(max_length=200, null=True, blank=True)
     status = models.BooleanField(default=False)
-
