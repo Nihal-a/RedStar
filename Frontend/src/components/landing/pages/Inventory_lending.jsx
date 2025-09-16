@@ -13,12 +13,14 @@ import { useMutation, useQuery } from "@apollo/client/react";
 import { GET_CATEGORIES, GET_INVENTORY_LENDING } from "../../graphql/queries";
 import { format } from "date-fns";
 import { Dropdown } from "primereact/dropdown";
-import { ADD_INVENTORY_LENDING } from "../../graphql/mutations";
+import {
+  ADD_INVENTORY_LENDING,
+  UPDATE_INVENTORY_LENDING,
+} from "../../graphql/mutations";
 
 export default function InventoryLending() {
   //graphql
   const { data, loading, error, refetch } = useQuery(GET_INVENTORY_LENDING);
-  console.log(data);
   const {
     data: categoryData,
     loading: categoryLoading,
@@ -27,6 +29,7 @@ export default function InventoryLending() {
   } = useQuery(GET_CATEGORIES);
 
   const [addInventoryLending] = useMutation(ADD_INVENTORY_LENDING);
+  const [updateInventoryLending] = useMutation(UPDATE_INVENTORY_LENDING);
 
   const [products, setProducts] = useState([]);
   const [filters, setFilters] = useState({
@@ -39,8 +42,9 @@ export default function InventoryLending() {
   // Modal states
   const [visible, setVisible] = useState(false);
   const [editingRow, setEditingRow] = useState(null);
-
+  const [originalRow, setOriginalRow] = useState(null);
   const [confirmVisible, setconfirmVisible] = useState(false);
+  const [inventoryOptions, setinventoryOptions] = useState([]);
   const [returnRemarks, setReturnRemarks] = useState("");
   const [returndatetemp, setreturndatetemp] = useState(new Date());
   const [selectedRow, setSelectedRow] = useState(null);
@@ -58,7 +62,7 @@ export default function InventoryLending() {
       lendeddate: null,
       returneddate: null,
       remarks: "",
-      status: "Pending",
+      status: false,
       _isNew: true,
     });
     setVisible(true);
@@ -66,7 +70,9 @@ export default function InventoryLending() {
 
   const confirmDelete = (rowData) => {
     confirmDialog({
-      message: `Delete "${rowData.name || "this item"}"?`,
+      message: `Delete record of "${rowData.name || "this persons"}" lended "${
+        rowData.inventory?.category?.name || "item"
+      }?`,
       header: "Delete Confirmation",
       headerClassName: "pr-8",
       // icon: "pi pi-trash text-red-600 text-[10px]",
@@ -94,11 +100,19 @@ export default function InventoryLending() {
     setconfirmVisible(true);
   };
 
+  //Handler for date setting when edting record
+  function normalizeDate(val) {
+    if (!val) return null;
+    const dateObj = typeof val === "string" ? new Date(val) : val;
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+    const day = String(dateObj.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`; // stays in local date
+  }
+  //add/edit record
   const saveRow = async () => {
-    console.log(editingRow);
     if (
       !editingRow.name?.trim() ||
-      // !editingRow.inventory ||
       !editingRow.address?.trim() ||
       !editingRow.lendedDate
     ) {
@@ -109,64 +123,70 @@ export default function InventoryLending() {
       });
       return;
     }
-
     if (!/^\d{10}$/.test(editingRow.mobileNumber)) {
-      toast.current.show({
+      toast.current?.show({
         severity: "warn",
         summary: "Validation",
-        detail: "Mobile number must be exactly 10 digits (numbers only).",
+        detail: "Mobile number must be exactly 10 digits.",
       });
       return;
     }
-
-    if (!editingRow) return;
-
     const normalizedLendedDate = editingRow.lendedDate
       ? editingRow.lendedDate.toISOString().split("T")[0]
       : null;
-    console.log(normalizedLendedDate);
-    try {
-      // await addInventoryLending({
-      //   variables: {
-      //     name: editingRow.name,
-      //     inventory: "47", // assuming ID
-      //     mobileNumber: editingRow.mobileNumber,
-      //     address: editingRow.address,
-      //     lendedDate: normalizedLendedDate,
-      //     remarks: editingRow.remarks || "",
-      //   },
-      //   update: (cache, { data }) => {
-      //     if (!data?.addInventoryLending) return;
-      //     const existing = cache.readQuery({
-      //       query: GET_INVENTORY_LENDING,
-      //     }) || { inventoryLending: [] };
 
-      //     cache.writeQuery({
-      //       query: GET_INVENTORY_LENDING,
-      //       data: {
-      //         inventoryLending: [
-      //           ...existing.inventoryLending,
-      //           data.addInventoryLending.inventory,
-      //         ],
-      //       },
-      //     });
-      //   },
-      // });
-      await addInventoryLending({
-        variables: {
-          name: editingRow.name,
-          inventory: editingRow.inventory, // ID from dropdown
-          mobile_number: editingRow.mobileNumber,
-          address: editingRow.address,
-          lended_date: normalizedLendedDate, // "YYYY-MM-DD"
-          remarks: editingRow.remarks || "",
-        },
-      });
+    try {
+      if (editingRow._isNew) {
+        // CREATE
+        console.log(editingRow);
+        await addInventoryLending({
+          variables: {
+            name: editingRow.name,
+            inventory: parseInt(editingRow.inventory),
+            mobileNumber: editingRow.mobileNumber,
+            address: editingRow.address,
+            lendedDate: normalizedLendedDate,
+            remarks: editingRow.remarks || null,
+          },
+        });
+      } else {
+        const newLendedDate = normalizeDate(editingRow.lendedDate);
+        const oldLendedDate = normalizeDate(originalRow.lendedDate);
+
+        const newReturnDate = normalizeDate(editingRow.returnDate);
+        const oldReturnDate = normalizeDate(originalRow.returnDate);
+
+        // Collect changes
+        const updates = {};
+        if (editingRow.name !== originalRow.name)
+          updates.name = editingRow.name;
+        if (editingRow.mobileNumber !== originalRow.mobileNumber)
+          updates.mobileNumber = editingRow.mobileNumber;
+        if (editingRow.address !== originalRow.address)
+          updates.address = editingRow.address;
+        if (newLendedDate !== oldLendedDate) updates.lendedDate = newLendedDate;
+        if (newReturnDate !== oldReturnDate) updates.returnDate = newReturnDate;
+        if (editingRow.remarks !== originalRow.remarks)
+          updates.remarks = editingRow.remarks;
+
+        if (Object.keys(updates).length > 0) {
+          await updateInventoryLending({
+            variables: {
+              id: editingRow.id,
+              ...updates,
+            },
+          });
+        }
+      }
       setVisible(false);
       toast.current?.show({
         severity: "success",
         summary: "Saved",
-        detail: "Inventory added successfully",
+        detail: `${
+          editingRow._isNew
+            ? "Inventory Added successfully"
+            : "Inventory Saved successfully"
+        }`,
       });
     } catch (err) {
       toast.current?.show({
@@ -205,6 +225,8 @@ export default function InventoryLending() {
     setFirst(e.first);
     setRows(e.rows);
   };
+
+  console.log(editingRow);
 
   return (
     <section className="w-full min-h-screen px-5 py-5 bg-[#f5f5f5]">
@@ -308,6 +330,7 @@ export default function InventoryLending() {
                           category:
                             rowData.inventory?.category?.id?.toString() || "",
                         });
+                        setOriginalRow({ ...rowData });
                         setVisible(true);
                       }}
                     >
@@ -516,28 +539,57 @@ export default function InventoryLending() {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1 !font-[poppins]">
-                Product*{editingRow?.inventory?.category?.name}
-              </label>
-              <Dropdown
-                value={editingRow.category}
-                options={categoryOptions}
-                onChange={(e) => {
-                  setEditingRow({
-                    ...editingRow,
-                    category: e.value, // ✅ keep only id here
-                  });
-                }}
-                onSelect={(e) => {
-                  setEditingRow({
-                    ...editingRow,
-                    category: e.value.category,
-                  });
-                }}
-                placeholder="Select a category"
-                className="w-full !font-[poppins] placeholder:!text-sm [&>.p-dropdown-label]:!p-1.5 !px-2"
-              />
+            <div className="flex justify-between gap-2">
+              <div className="flex flex-col w-[50%]">
+                <label className="block text-sm font-medium mb-1 !font-[poppins]">
+                  Category*
+                </label>
+                <Dropdown
+                  value={editingRow.category}
+                  options={[
+                    { label: "Select Category", value: "" }, // ✅ default option
+                    ...(categoryData?.categories.map((cat) => ({
+                      label: cat.name,
+                      value: cat.id.toString(),
+                    })) || []),
+                  ]}
+                  onChange={(e) => {
+                    const selectedCategoryId = e.value;
+                    setEditingRow({
+                      ...editingRow,
+                      category: selectedCategoryId,
+                      inventory: "",
+                    });
+                    const selectedCategory = categoryData?.categories.find(
+                      (cat) => cat.id.toString() === selectedCategoryId
+                    );
+                    setinventoryOptions(
+                      selectedCategory?.inventories
+                        ?.filter(
+                          (inv) => inv.status === true || inv.status === 1
+                        )
+                        .map((inv) => ({
+                          label: inv.name,
+                          value: inv.id.toString(),
+                        })) || []
+                    );
+                  }}
+                  placeholder="Select a category"
+                />
+              </div>
+              <div className="flex flex-col w-[50%]">
+                <label className="block text-sm font-medium mb-1 !font-[poppins]">
+                  inventory*
+                </label>
+                <Dropdown
+                  value={editingRow.inventory}
+                  options={inventoryOptions}
+                  onChange={(e) => {
+                    setEditingRow({ ...editingRow, inventory: e.value });
+                  }}
+                  placeholder="Select inventory"
+                />
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium mb-1 !font-[poppins]">
@@ -573,31 +625,30 @@ export default function InventoryLending() {
                   dateFormat="dd-mm-yy"
                 />
               </div>
-              {editingRow?._isNew ? (
-                ""
-              ) : (
-                <div className="flex flex-col w-[50%]">
-                  <label className="block text-sm font-medium mb-1 !font-[poppins]">
-                    Returned Date
-                  </label>
-                  <Calendar
-                    inputClassName="!p-1"
-                    value={editingRow.returnedDate}
-                    className=" placeholder:text-sm  !font-[poppins] !p-0"
-                    onChange={(e) =>
-                      setEditingRow({ ...editingRow, returnedDate: e.value })
-                    }
-                    showButtonBar
-                    minDate={
-                      editingRow.lendedDate
-                        ? new Date(editingRow.lendedDate)
-                        : null
-                    }
-                    maxDate={new Date()}
-                    dateFormat="dd-mm-yy"
-                  />
-                </div>
-              )}
+              {!editingRow?._isNew &&
+                (editingRow?.status === true || editingRow?.status === 1) && (
+                  <div className="flex flex-col w-[50%]">
+                    <label className="block text-sm font-medium mb-1 !font-[poppins]">
+                      Returned Date
+                    </label>
+                    <Calendar
+                      inputClassName="!p-1"
+                      value={editingRow.returnedDate}
+                      className=" placeholder:text-sm  !font-[poppins] !p-0"
+                      onChange={(e) =>
+                        setEditingRow({ ...editingRow, returnedDate: e.value })
+                      }
+                      showButtonBar
+                      minDate={
+                        editingRow.lendedDate
+                          ? new Date(editingRow.lendedDate)
+                          : null
+                      }
+                      maxDate={new Date()}
+                      dateFormat="dd-mm-yy"
+                    />
+                  </div>
+                )}
             </div>
 
             <div>

@@ -1,5 +1,6 @@
 import { gql } from "@apollo/client";
 
+//-------------------------CATEGORY MANAGMENT-----------------------------------------------------------------------------------------------------------------
 export const CREATE_CATEGORY = gql`
   mutation CreateCategory($name: String!, $image: String) {
     createCategory(name: $name, image: $image) {
@@ -33,6 +34,7 @@ export const DELETE_CATEGORY = gql`
   }
 `;
 
+//--------------------INVENORY MANGMENT---------------------------------------------------------------------------------------------------------------------
 export const CREATE_INVENTORY = gql`
   mutation CreateInventory($name: String!, $category: ID!) {
     createInventory(name: $name, category: $category) {
@@ -67,29 +69,30 @@ export const DELETE_INVENTORY = gql`
   }
 `;
 
+//------------------INVENTORY LENDING MANAGMENT--------------------------------------------------------------------------------------------------------
 export const ADD_INVENTORY_LENDING = gql`
   mutation addInventoryLending(
     $name: String!
     $inventory: ID!
-    $mobile_number: String!
+    $mobileNumber: String!
     $address: String!
-    $lended_date: String!
+    $lendedDate: Date!
     $remarks: String
   ) {
     addInventoryLending(
       name: $name
       inventory: $inventory
-      mobile_number: $mobile_number
+      mobileNumber: $mobileNumber
       address: $address
-      lended_date: $lended_date
+      lendedDate: $lendedDate
       remarks: $remarks
     ) {
-      inventory_lending {
+      inventoryLending {
         id
         name
         address
-        lended_date
-        mobile_number
+        lendedDate
+        mobileNumber
         inventory {
           id
           name
@@ -98,6 +101,42 @@ export const ADD_INVENTORY_LENDING = gql`
     }
   }
 `;
+
+export const UPDATE_INVENTORY_LENDING = gql`
+  mutation updateInventoryLending(
+    $id: ID!
+    $name: String
+    $inventory: ID
+    $mobileNumber: String
+    $address: String
+    $lendedDate: Date
+    $returnDate: Date
+    $remarks: String
+  ) {
+    updateInventoryLending(
+      id: $id
+      name: $name
+      inventory: $inventory
+      mobileNumber: $mobileNumber
+      address: $address
+      lendedDate: $lendedDate
+      returnDate: $returnDate
+      remarks: $remarks
+    ) {
+      inventoryLending {
+        name
+        id
+        inventory {
+          id
+          name
+        }
+      }
+    }
+  }
+`;
+
+//---------------------------------------------------------------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------------------------------
 
 export const CREATE_BOOK = gql`
   mutation CreateBook(

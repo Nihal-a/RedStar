@@ -24,6 +24,11 @@ export const GET_CATEGORIES = gql`
       image
       total
       available
+      inventories {
+        id
+        name
+        status
+      }
     }
   }
 `;
