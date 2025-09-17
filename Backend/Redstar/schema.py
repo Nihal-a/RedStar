@@ -31,14 +31,18 @@ class InventoryLendingType(DjangoObjectType):
     class Meta:
         model = InventoryLending
         fields = ("id", "name", "mobileNumber", "inventory", "address", "lendedDate", "returnDate", "remarks", "status")
-    
+
+class CountsType(graphene.ObjectType):
+    inventories = graphene.Int()
+    categories = graphene.Int()
     
 class Query(graphene.ObjectType):
     books = graphene.List(BookType)
     inventories = graphene.List(InventoryType)
     categories = graphene.List(CategoryType)
     inventory_lending = graphene.List(InventoryLendingType)
-    
+    counts = graphene.Field(CountsType)
+
     def resolve_categories(root, info):
         return Category.objects.all()
     
@@ -50,6 +54,12 @@ class Query(graphene.ObjectType):
     
     def resolve_books(root, info):
         return Books.objects.all()
+    
+    def resolve_counts(root, info):
+        return {
+            "inventories": Inventory.objects.count(),
+            "categories": Category.objects.count(),
+        }
 
 schema = graphene.Schema(query=Query)
 
@@ -181,25 +191,26 @@ class AddInventoryLending(graphene.Mutation):
     inventory_lending = graphene.Field(InventoryLendingType)
     
     def mutate(self, info, name, inventory, mobileNumber, address, lendedDate, remarks):
-
- 
-
-        inventory_lending = InventoryLending.objects.create(
-            name = name, 
-            inventory = Inventory.objects.get(pk=inventory),
-            mobileNumber = mobileNumber,
-            address = address,
-            lendedDate = lendedDate,
-            remarks = remarks,
-            status = False
-        )
-        inventory = Inventory.objects.get(pk=inventory)
-        inventory.status = False
-        inventory.save()
+        print("safe")
+        if Inventory.objects.get(pk=inventory).status ==  False :
+            raise Exception("Lending record not found")
+        else:
+            inventory_lending = InventoryLending.objects.create(
+                name = name, 
+                inventory = Inventory.objects.get(pk=inventory),
+                mobileNumber = mobileNumber,
+                address = address,
+                lendedDate = lendedDate,
+                returnDate = None,
+                remarks = remarks,
+                status = False
+            )
+            Inventory.objects.filter(pk=inventory).update(status=False)
 
         return AddInventoryLending(inventory_lending = inventory_lending)
 
 class UpdateInventoryLending(graphene.Mutation):
+    
     class Arguments:
         id = graphene.ID(required=True)
         name = graphene.String()
@@ -213,6 +224,7 @@ class UpdateInventoryLending(graphene.Mutation):
     inventory_lending = graphene.Field(InventoryLendingType)
 
     def mutate(self, info, id, **kwargs):
+        print("ok")
         try:
             lending = InventoryLending.objects.get(pk=id)
         except InventoryLending.DoesNotExist:
@@ -221,12 +233,62 @@ class UpdateInventoryLending(graphene.Mutation):
         for field, value in kwargs.items():
             if value is not None:
                 if field == "inventory":
-                    value = Inventory.objects.get(pk=int(value))
-                setattr(lending, field, value)
+                    old_inventory = lending.inventory
+                    if old_inventory:
+                        old_inventory.status = True
+                        old_inventory.save()
+
+                    new_inventory = Inventory.objects.get(pk=int(value))
+                    new_inventory.status = False
+                    new_inventory.save()
+
+                    setattr(lending, field, new_inventory)
+                else:
+                    setattr(lending, field, value)
 
         lending.save()
         return UpdateInventoryLending(inventory_lending=lending)
-    
+class ReturnInventoryLending(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+        returnDate = graphene.Date(required=True)
+        remarks = graphene.String()
+
+    inventory_lending = graphene.Field(InventoryLendingType)
+
+    def mutate(self, info, id, returnDate, remarks=None  ):
+        print(returnDate)
+        try:
+            lending = InventoryLending.objects.get(pk=id)
+        except InventoryLending.DoesNotExist:
+            raise Exception("Lending record not found")
+        
+        lending.returnDate = returnDate
+        lending.status = True
+        if remarks is not None:
+            lending.remarks = remarks
+        lending.save()
+        
+        Inventory.objects.filter(pk=lending.inventory.pk).update(status=True)
+       
+        return ReturnInventoryLending(inventory_lending=lending)
+
+
+class DeleteInventoryLending(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+
+    ok = graphene.Boolean()
+
+    def mutate(self, info, id):
+        try:
+            lending = InventoryLending.objects.get(pk=id)
+            if lending.status == 0:  
+                raise Exception("Lending inventory not returned yet.")
+            lending.delete()
+            return DeleteInventoryLending(ok=True)
+        except InventoryLending.DoesNotExist:
+            raise Exception("Lending record not found.")
     
 class CreateBook(graphene.Mutation):
     class Arguments:
@@ -270,6 +332,8 @@ class Mutation(graphene.ObjectType):
 
     add_inventory_lending = AddInventoryLending.Field()
     update_inventory_lending = UpdateInventoryLending.Field()
+    return_inventory_lending = ReturnInventoryLending.Field()
+    delete_inventory_lending = DeleteInventoryLending.Field()
 
     create_book = CreateBook.Field()
     delete_book = DeleteBook.Field()

@@ -90,13 +90,20 @@ export const ADD_INVENTORY_LENDING = gql`
       inventoryLending {
         id
         name
-        address
-        lendedDate
         mobileNumber
+        address
         inventory {
           id
           name
+          category {
+            id
+            name
+          }
         }
+        lendedDate
+        returnDate
+        remarks
+        status
       }
     }
   }
@@ -124,13 +131,64 @@ export const UPDATE_INVENTORY_LENDING = gql`
       remarks: $remarks
     ) {
       inventoryLending {
-        name
         id
+        name
+        mobileNumber
+        address
         inventory {
           id
           name
+          category {
+            id
+            name
+          }
         }
+        lendedDate
+        returnDate
+        remarks
+        status
       }
+    }
+  }
+`;
+
+export const RETURN_INVENTORY_LENDING = gql`
+  mutation returnInventoryLending(
+    $id: ID!
+    $returnDate: Date!
+    $remarks: String
+  ) {
+    returnInventoryLending(
+      id: $id
+      returnDate: $returnDate
+      remarks: $remarks
+    ) {
+      inventoryLending {
+        id
+        name
+        mobileNumber
+        address
+        inventory {
+          id
+          name
+          category {
+            id
+            name
+          }
+        }
+        lendedDate
+        returnDate
+        remarks
+        status
+      }
+    }
+  }
+`;
+
+export const DELETE_INVENTORY_LENDING = gql`
+  mutation deleteInventoryLending($id: ID!) {
+    deleteInventoryLending(id: $id) {
+      ok
     }
   }
 `;

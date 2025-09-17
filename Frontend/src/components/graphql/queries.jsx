@@ -1,5 +1,14 @@
 import { gql } from "@apollo/client";
 
+export const COUNT = gql`
+  query GetCounts {
+    counts {
+      inventories
+      categories
+    }
+  }
+`;
+
 export const GET_INVENTORIES = gql`
   query GetInventories {
     inventories {

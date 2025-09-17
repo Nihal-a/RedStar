@@ -30,7 +30,7 @@ export default function Inventory() {
     error: categoryError,
     refetch: categoryFetch,
   } = useQuery(GET_CATEGORIES);
-
+  
   const [createInventory] = useMutation(CREATE_INVENTORY);
   const [DeleteInventory] = useMutation(DELETE_INVENTORY);
   const [createCategory] = useMutation(CREATE_CATEGORY);
@@ -449,6 +449,14 @@ export default function Inventory() {
               <Column
                 field="available"
                 header="Avail Stock"
+                body={(rowData) => {
+                  const availableCount =
+                    rowData?.inventories?.filter(
+                      (inv) => inv.status === true || inv.status === 1
+                    ).length || 0;
+
+                  return <span>{availableCount}</span>;
+                }}
                 sortable
                 headerClassName="font-[poppins]"
                 alignHeader={"center"}

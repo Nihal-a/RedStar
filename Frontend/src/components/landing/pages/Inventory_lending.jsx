@@ -15,6 +15,8 @@ import { format } from "date-fns";
 import { Dropdown } from "primereact/dropdown";
 import {
   ADD_INVENTORY_LENDING,
+  DELETE_INVENTORY_LENDING,
+  RETURN_INVENTORY_LENDING,
   UPDATE_INVENTORY_LENDING,
 } from "../../graphql/mutations";
 
@@ -30,6 +32,8 @@ export default function InventoryLending() {
 
   const [addInventoryLending] = useMutation(ADD_INVENTORY_LENDING);
   const [updateInventoryLending] = useMutation(UPDATE_INVENTORY_LENDING);
+  const [returnInventoryLending] = useMutation(RETURN_INVENTORY_LENDING);
+  const [deleteInventoryLending] = useMutation(DELETE_INVENTORY_LENDING);
 
   const [products, setProducts] = useState([]);
   const [filters, setFilters] = useState({
@@ -52,6 +56,17 @@ export default function InventoryLending() {
   const toast = useRef(null);
 
   /* ---------- CRUD ---------- */
+
+  //Handler for date setting when edting record
+  function normalizeDate(val) {
+    if (!val) return null;
+    const dateObj = typeof val === "string" ? new Date(val) : val;
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+    const day = String(dateObj.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`; // stays in local date
+  }
+
   const addRow = () => {
     setEditingRow({
       id: Date.now(),
@@ -68,53 +83,13 @@ export default function InventoryLending() {
     setVisible(true);
   };
 
-  const confirmDelete = (rowData) => {
-    confirmDialog({
-      message: `Delete record of "${rowData.name || "this persons"}" lended "${
-        rowData.inventory?.category?.name || "item"
-      }?`,
-      header: "Delete Confirmation",
-      headerClassName: "pr-8",
-      // icon: "pi pi-trash text-red-600 text-[10px]",
-      icon: (
-        <i className="pi pi-trash text-red-600" style={{ fontSize: "18px" }} />
-      ),
-      acceptLabel: "Delete",
-      acceptClassName: "m-0",
-      rejectLabel: "Cancel",
-      draggable: false,
-      accept: () => {
-        setProducts((prev) => prev.filter((p) => p.id !== rowData.id));
-        toast.current?.show({
-          severity: "success",
-          summary: "Deleted",
-          detail: "Item removed",
-        });
-      },
-    });
-  };
-
-  const confirmReturn = (rowData) => {
-    setSelectedRow(rowData);
-    setReturnRemarks("");
-    setconfirmVisible(true);
-  };
-
-  //Handler for date setting when edting record
-  function normalizeDate(val) {
-    if (!val) return null;
-    const dateObj = typeof val === "string" ? new Date(val) : val;
-    const year = dateObj.getFullYear();
-    const month = String(dateObj.getMonth() + 1).padStart(2, "0");
-    const day = String(dateObj.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`; // stays in local date
-  }
   //add/edit record
   const saveRow = async () => {
     if (
       !editingRow.name?.trim() ||
       !editingRow.address?.trim() ||
-      !editingRow.lendedDate
+      !editingRow.lendedDate ||
+      !editingRow.inventory
     ) {
       toast.current?.show({
         severity: "warn",
@@ -131,14 +106,12 @@ export default function InventoryLending() {
       });
       return;
     }
-    const normalizedLendedDate = editingRow.lendedDate
-      ? editingRow.lendedDate.toISOString().split("T")[0]
-      : null;
+
+    const normalizedLendedDate = normalizeDate(editingRow.lendedDate);
 
     try {
       if (editingRow._isNew) {
         // CREATE
-        console.log(editingRow);
         await addInventoryLending({
           variables: {
             name: editingRow.name,
@@ -156,7 +129,6 @@ export default function InventoryLending() {
         const newReturnDate = normalizeDate(editingRow.returnDate);
         const oldReturnDate = normalizeDate(originalRow.returnDate);
 
-        // Collect changes
         const updates = {};
         if (editingRow.name !== originalRow.name)
           updates.name = editingRow.name;
@@ -164,6 +136,21 @@ export default function InventoryLending() {
           updates.mobileNumber = editingRow.mobileNumber;
         if (editingRow.address !== originalRow.address)
           updates.address = editingRow.address;
+
+        const newInventoryId =
+          typeof editingRow.inventory === "object"
+            ? editingRow.inventory.id.toString()
+            : editingRow.inventory?.toString();
+
+        const oldInventoryId =
+          typeof originalRow.inventory === "object"
+            ? originalRow.inventory.id.toString()
+            : originalRow.inventory?.toString();
+
+        if (newInventoryId !== oldInventoryId) {
+          updates.inventory = parseInt(newInventoryId);
+        }
+
         if (newLendedDate !== oldLendedDate) updates.lendedDate = newLendedDate;
         if (newReturnDate !== oldReturnDate) updates.returnDate = newReturnDate;
         if (editingRow.remarks !== originalRow.remarks)
@@ -188,6 +175,8 @@ export default function InventoryLending() {
             : "Inventory Saved successfully"
         }`,
       });
+      // categoryFetch();
+      // refetch()
     } catch (err) {
       toast.current?.show({
         severity: "error",
@@ -197,20 +186,81 @@ export default function InventoryLending() {
     }
   };
 
-  const categoryOptions = categoryLoading
-    ? [{ label: "Select Category", value: "" }]
-    : [
-        { label: "Select Category", value: "" },
-        ...(categoryData?.categories
-          .filter(
-            (cat, index, self) =>
-              cat && self.findIndex((c) => c.id === cat.id) === index
-          )
-          .map((cat) => ({
-            label: cat.name,
-            value: cat.id.toString(),
-          })) || []),
-      ];
+  //Return inventory
+  const confirmReturn = (rowData) => {
+    setSelectedRow(rowData);
+    setReturnRemarks("");
+    setconfirmVisible(true);
+  };
+
+  const markReturn = async (id) => {
+    if (!returndatetemp || !id) {
+      toast.current?.show({
+        severity: "warn",
+        summary: "Validation",
+        detail: "Please fill required fields",
+      });
+      return;
+    }
+    try {
+      const date = normalizeDate(returndatetemp);
+      await returnInventoryLending({
+        variables: {
+          id: id,
+          remarks: returnRemarks,
+          returnDate: date,
+        },
+      });
+      setconfirmVisible(false);
+      toast.current?.show({
+        severity: "success",
+        summary: "Saved",
+        detail: "Inventory Return Marked ",
+      });
+    } catch (err) {
+      toast.current?.show({
+        severity: "error",
+        summary: "Error",
+        detail: err.message,
+      });
+    }
+    refetch();
+    categoryFetch();
+  };
+
+  const confirmDelete = (rowData) => {
+    confirmDialog({
+      message: `Delete record of "${rowData.name || "this person"}" lended "${
+        rowData.inventory?.category?.name || "item"
+      }"?`,
+      header: "Delete Confirmation",
+      headerClassName: "pr-8",
+      icon: (
+        <i className="pi pi-trash text-red-600" style={{ fontSize: "18px" }} />
+      ),
+      acceptLabel: "Delete",
+      acceptClassName: "m-0",
+      rejectLabel: "Cancel",
+      draggable: false,
+      accept: async () => {
+        try {
+          await deleteInventoryLending({ variables: { id: rowData.id } });
+
+          toast.current?.show({
+            severity: "success",
+            summary: "Deleted",
+            detail: "Item removed",
+          });
+        } catch (err) {
+          toast.current?.show({
+            severity: "error",
+            summary: "Error",
+            detail: err.message || "Lending inventory not returned yet.",
+          });
+        }
+      },
+    });
+  };
 
   const onGlobalFilterChange = (e) => {
     const value = e.target.value;
@@ -226,7 +276,77 @@ export default function InventoryLending() {
     setRows(e.rows);
   };
 
-  console.log(editingRow);
+  //for preservation of choose selection while editing the inventory lending
+  useEffect(() => {
+    if (!categoryData) return;
+
+    if (!editingRow?.category) {
+      setinventoryOptions([]);
+      return;
+    }
+
+    const selectedCategory = categoryData.categories.find(
+      (cat) => cat.id.toString() === editingRow.category
+    );
+
+    if (!selectedCategory) {
+      setinventoryOptions([]);
+      return;
+    }
+
+    let availableInventories =
+      selectedCategory.inventories
+        ?.filter((inv) => inv.status === true || inv.status === 1)
+        .map((inv) => ({
+          label: inv.name,
+          value: inv.id.toString(),
+        })) || [];
+
+    if (!editingRow._isNew && originalRow?.inventory) {
+      const originalInventoryId = originalRow.inventory.id.toString();
+      const originalCategoryId = originalRow.inventory.category.id.toString();
+
+      if (editingRow.category === originalCategoryId) {
+        if (
+          !availableInventories.some((inv) => inv.value === originalInventoryId)
+        ) {
+          availableInventories.unshift({
+            label: `${originalRow.inventory.name} (Original Selection)`,
+            value: originalInventoryId,
+          });
+        }
+      }
+    }
+
+    if (editingRow.inventory) {
+      const currentInventoryId =
+        typeof editingRow.inventory === "object"
+          ? editingRow.inventory.id.toString()
+          : editingRow.inventory.toString();
+
+      if (
+        !availableInventories.some((inv) => inv.value === currentInventoryId)
+      ) {
+        const inventoryInCategory = selectedCategory.inventories?.find(
+          (inv) => inv.id.toString() === currentInventoryId
+        );
+
+        if (inventoryInCategory) {
+          availableInventories.unshift({
+            label: `${inventoryInCategory.name} (Current Selection)`,
+            value: currentInventoryId,
+          });
+        }
+      }
+    }
+
+    setinventoryOptions(availableInventories);
+  }, [
+    editingRow?.category,
+    categoryData,
+    editingRow?._isNew,
+    originalRow?.inventory,
+  ]);
 
   return (
     <section className="w-full min-h-screen px-5 py-5 bg-[#f5f5f5]">
@@ -323,41 +443,39 @@ export default function InventoryLending() {
                 body={(rowData) => (
                   <div className="w-full flex items-center justify-center gap-2">
                     <button
-                      className=" !bg-blue-500 !text-white flex items-center justify-center rounded-[6px] p-2.5 cursor-pointer"
+                      className=""
                       onClick={() => {
                         setEditingRow({
                           ...rowData,
                           category:
                             rowData.inventory?.category?.id?.toString() || "",
+                          // Keep the inventory as object for editing
+                          inventory: rowData.inventory || "",
                         });
                         setOriginalRow({ ...rowData });
                         setVisible(true);
                       }}
                     >
-                      <i class="bi bi-pencil leading-none"></i>
+                      <i className="bi bi-pencil  cursor-pointer text-blue-500 p-2 rounded bg-blue-100"></i>
                     </button>
-                    <button
-                      className=" !bg-red-500 !text-white flex items-center justify-center rounded-[6px] p-2.5 cursor-pointer"
-                      onClick={() => confirmDelete(rowData)}
-                    >
-                      <i class="bi bi-trash leading-none"></i>
+                    <button onClick={() => confirmDelete(rowData)}>
+                      <i
+                        class="bi bi-trash leading-none"
+                        className="bi bi-trash  cursor-pointer text-red-500 p-2 rounded bg-red-100"
+                      ></i>
                     </button>
-                    <button
-                      className=" !bg-green-500 !text-white flex items-center justify-center rounded-[6px] p-2.5 cursor-pointer"
-                      onClick={() => confirmReturn(rowData)}
-                    >
-                      <i class="bi bi-check-lg leading-none"></i>
-                    </button>
+                    {rowData.status ? (
+                      ""
+                    ) : (
+                      <button
+                        className=" "
+                        onClick={() => confirmReturn(rowData)}
+                      >
+                        <i className="bi bi-check-lg  cursor-pointer text-green-500 p-2 rounded bg-green-100"></i>
+                      </button>
+                    )}
                   </div>
                 )}
-                // body={(rowData) => (
-                //   <div className="flex gap-2">
-                //     <i
-                //       className="bi bi-trash  cursor-pointer text-red-500 p-2 rounded bg-red-100"
-                //       // onClick={() => confirmDelete(rowData, "category")}
-                //     ></i>
-                //   </div>
-                // )}
                 alignHeader={"center"}
                 style={{
                   width: "10%",
@@ -383,6 +501,7 @@ export default function InventoryLending() {
                 }}
               />
               <Column
+                field="product"
                 body={(rowData) => (
                   <div>
                     <span className="">
@@ -415,7 +534,6 @@ export default function InventoryLending() {
                 header="Lended Date"
                 headerClassName="font-[poppins]"
                 sortable
-                // body={(rowData) => rowData.lendedDate}
                 body={(rowData) =>
                   format(new Date(rowData.lendedDate), "dd-MM-yy")
                 }
@@ -426,15 +544,17 @@ export default function InventoryLending() {
                 }}
               />
               <Column
-                field="returneddate"
-                header="Return Date"
+                field="returnDate"
+                header="Returned Date"
                 headerClassName="font-[poppins]"
-                alignHeader={"center"}
-                body={(row) =>
-                  row.returneddate
-                    ? row.returneddate.toLocaleDateString("en-GB")
-                    : "-"
-                }
+                alignHeader="center"
+                body={(rowData) => {
+                  return rowData.returnDate ? (
+                    format(new Date(rowData.returnDate), "dd-MM-yy")
+                  ) : (
+                    <span className="text-gray-400">Not returned.</span>
+                  );
+                }}
                 style={{
                   width: "10%",
                   textAlign: "center",
@@ -444,6 +564,13 @@ export default function InventoryLending() {
                 field="remarks"
                 header="Remarks"
                 headerClassName="font-[poppins]"
+                body={(rowData) => {
+                  return rowData.remarks ? (
+                    <span>{rowData.remarks}</span>
+                  ) : (
+                    <span className="text-gray-400">No remarks.</span>
+                  );
+                }}
                 alignHeader={"center"}
                 style={{
                   textAlign: "center",
@@ -547,7 +674,7 @@ export default function InventoryLending() {
                 <Dropdown
                   value={editingRow.category}
                   options={[
-                    { label: "Select Category", value: "" }, // ✅ default option
+                    { label: "Select Category", value: "" },
                     ...(categoryData?.categories.map((cat) => ({
                       label: cat.name,
                       value: cat.id.toString(),
@@ -555,40 +682,56 @@ export default function InventoryLending() {
                   ]}
                   onChange={(e) => {
                     const selectedCategoryId = e.value;
-                    setEditingRow({
+                    const newEditingRow = {
                       ...editingRow,
                       category: selectedCategoryId,
-                      inventory: "",
-                    });
-                    const selectedCategory = categoryData?.categories.find(
-                      (cat) => cat.id.toString() === selectedCategoryId
-                    );
-                    setinventoryOptions(
-                      selectedCategory?.inventories
-                        ?.filter(
-                          (inv) => inv.status === true || inv.status === 1
-                        )
-                        .map((inv) => ({
-                          label: inv.name,
-                          value: inv.id.toString(),
-                        })) || []
-                    );
+                    };
+
+                    if (
+                      !editingRow._isNew &&
+                      originalRow?.inventory &&
+                      selectedCategoryId ===
+                        originalRow.inventory.category.id.toString()
+                    ) {
+                      newEditingRow.inventory =
+                        originalRow.inventory.id.toString();
+                    } else {
+                      newEditingRow.inventory = "";
+                    }
+
+                    setEditingRow(newEditingRow);
                   }}
                   placeholder="Select a category"
                 />
               </div>
               <div className="flex flex-col w-[50%]">
-                <label className="block text-sm font-medium mb-1 !font-[poppins]">
-                  inventory*
+                <label
+                  className={`block text-sm font-medium mb-1 !font-[poppins] `}
+                >
+                  Inventory*
                 </label>
                 <Dropdown
-                  value={editingRow.inventory}
+                  value={
+                    editingRow?.inventory
+                      ? typeof editingRow.inventory === "object"
+                        ? editingRow.inventory.id.toString()
+                        : editingRow.inventory.toString()
+                      : ""
+                  }
                   options={inventoryOptions}
                   onChange={(e) => {
                     setEditingRow({ ...editingRow, inventory: e.value });
                   }}
                   placeholder="Select inventory"
+                  disabled={!editingRow.category} // Disable if no category selected
                 />
+                {editingRow.category && inventoryOptions.length < 1 ? (
+                  <label className="pl-3 text-[13px] text-red-500">
+                    items not available!
+                  </label>
+                ) : (
+                  ""
+                )}
               </div>
             </div>
             <div>
@@ -633,10 +776,14 @@ export default function InventoryLending() {
                     </label>
                     <Calendar
                       inputClassName="!p-1"
-                      value={editingRow.returnedDate}
+                      value={
+                        editingRow.returnDate
+                          ? new Date(editingRow.returnDate)
+                          : null
+                      }
                       className=" placeholder:text-sm  !font-[poppins] !p-0"
                       onChange={(e) =>
-                        setEditingRow({ ...editingRow, returnedDate: e.value })
+                        setEditingRow({ ...editingRow, returnDate: e.value })
                       }
                       showButtonBar
                       minDate={
@@ -646,6 +793,7 @@ export default function InventoryLending() {
                       }
                       maxDate={new Date()}
                       dateFormat="dd-mm-yy"
+                      readonlyInput
                     />
                   </div>
                 )}
@@ -668,68 +816,58 @@ export default function InventoryLending() {
         )}
       </Dialog>
 
-      <ConfirmDialog
+      <Dialog
         className="w-[90%] md:w-[25%]"
         visible={confirmVisible}
         onHide={() => setconfirmVisible(false)}
+        draggable={false}
         header="Return Confirmation"
-        message={
-          <div className="flex flex-col gap-3">
-            <p>
-              {selectedRow?.name || "This person"} is returning{" "}
-              {selectedRow?.product || "this item"}?.
-            </p>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Return Date
-              </label>
-              <Calendar
-                inputClassName="!p-1"
-                value={returndatetemp}
-                className=" placeholder:text-sm  !font-[poppins] !p-0"
-                onChange={(e) => setreturndatetemp(e.value)}
-                showButtonBar
-                maxDate={new Date()}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Remarks</label>
-              <InputTextarea
-                value={returnRemarks}
-                onChange={(e) => setReturnRemarks(e.target.value)}
-                placeholder="Enter remarks..."
-                className="w-full placeholder:text-sm !p-1.5 !font-[poppins] !px-3"
-              />
-            </div>
-          </div>
-        }
         acceptLabel="Confirm"
-        rejectLabel="Cancel"
-        acceptClassName="m-0 !p-2 !font-[poppins] !text-[14px] !bg-green-500 !border-0"
-        rejectClassName="!p-2 !font-[poppins] !text-[14px] !bg-gray-500 !border-0"
-        accept={() => {
-          setProducts((prev) =>
-            prev.map((p) =>
-              p.id === selectedRow.id
-                ? {
-                    ...p,
-                    status: "Returned",
-                    returneddate: returndatetemp,
-                    remarks: returnRemarks || "-",
-                  }
-                : p
-            )
-          );
-          setReturnRemarks("");
-          setconfirmVisible(false);
-          toast.current?.show({
-            severity: "success",
-            summary: "Updated",
-            detail: "Return Confirmed",
-          });
-        }}
-        reject={() => setReturnRemarks("")}
-      />
+      >
+        <div className="flex flex-col gap-3 ">
+          <p>
+            {selectedRow?.name || "This person"} is returning{" "}
+            {selectedRow?.inventory?.category?.name || "this item"}?.
+          </p>
+          <div className="">
+            <label className="block text-sm font-medium mb-1">
+              Return Date
+            </label>
+            <Calendar
+              inputClassName="!p-1"
+              value={returndatetemp}
+              className=" placeholder:text-sm  !font-[poppins] !p-0"
+              onChange={(e) => setreturndatetemp(e.value)}
+              showButtonBar
+              maxDate={new Date()}
+              dateFormat="dd-mm-yy"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Remarks</label>
+            <InputTextarea
+              value={returnRemarks}
+              onChange={(e) => setReturnRemarks(e.target.value)}
+              placeholder="Enter remarks..."
+              className="w-full placeholder:text-sm !p-1.5 !font-[poppins] !px-3"
+            />
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 mt-5">
+          <button
+            className="!font-[poppins] !text-[14px] p-2 font-semibold !text-white bg-gray-500 rounded-md cursor-pointer hover:bg-gray-600"
+            onClick={() => setconfirmVisible(false)}
+          >
+            Cancel
+          </button>
+          <button
+            className="!font-[poppins] !text-[14px] p-2 font-semibold !text-white bg-green-500 rounded-md cursor-pointer hover:bg-green-600"
+            onClick={() => markReturn(selectedRow.id)}
+          >
+            Mark Return
+          </button>
+        </div>
+      </Dialog>
       <Toast ref={toast} />
       <ConfirmDialog />
     </section>
