@@ -418,10 +418,10 @@ export default function InventoryLending() {
               filters={filters}
               globalFilterFields={[
                 "name",
-                "product",
+                "inventory.category.name",
                 "address",
-                "mobilenumber",
-                "lendeddate",
+                "mobileNumber",
+                "lendedDate",
               ]}
               emptyMessage="No Records found."
               tableStyle={{ minWidth: "70rem", tableLayout: "fixed" }}
