@@ -11,30 +11,34 @@ import { ConfirmDialog, confirmDialog } from "primereact/confirmdialog";
 import { Dialog } from "primereact/dialog";
 import { FilterMatchMode } from "primereact/api";
 import { useQuery, useMutation } from "@apollo/client/react";
-import { CREATE_BOOK } from "../../graphql/mutations";
+import { CREATE_BOOK, DELETE_BOOK, UPDATE_BOOK } from "../../graphql/mutations";
 import { GET_BOOKS } from "../../graphql/queries";
 
 export default function Book() {
-  //mutation
-  const [createBook] = useMutation(CREATE_BOOK);
+  //graphql
   const { data, loading, error, refetch } = useQuery(GET_BOOKS);
 
+  //mutations
+  const [createBook] = useMutation(CREATE_BOOK);
+  const [deleteBook] = useMutation(DELETE_BOOK);
+  const [updateBook] = useMutation(UPDATE_BOOK);
+
   //component
-  const [products, setProducts] = useState([]);
   const [filters, setFilters] = useState({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
   });
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [first, setFirst] = useState(0);
-  const [rows, setRows] = useState(8);
+  const [rows, setRows] = useState(5);
 
   //modal
   const [visible, setVisible] = useState(false);
   const [editingRow, setEditingRow] = useState(null);
-  const [authorSuggestions, setAuthorSuggestions] = useState([]);
+  const [originalRow, setOriginalRow] = useState(null);
   const [bookSuggestions, setBookSuggestions] = useState([]);
   const toast = useRef(null);
 
+  //auto suggestion while typiing book name using google API
   const searchBooks = async (event) => {
     if (!event.query.trim()) {
       setBookSuggestions([]);
@@ -65,46 +69,20 @@ export default function Book() {
     }
   };
 
-  /* ---------- CRUD ---------- */
+  //save/edit book
   const addRow = () => {
     setEditingRow({
       id: Date.now(),
       name: "",
       author: "",
-      image: "",
       category: "",
       count: 0,
-      available: 0,
       _isNew: true,
     });
     setVisible(true);
   };
 
-  const confirmDelete =async (rowData) => {
-    confirmDialog({
-      message: `Delete "${rowData.name || "this item"}"?`,
-      header: "Delete Confirmation",
-      headerClassName: "pr-8",
-      // icon: "pi pi-trash text-red-600 text-[10px]",
-      icon: (
-        <i className="pi pi-trash text-red-600" style={{ fontSize: "18px" }} />
-      ),
-      acceptLabel: "Delete",
-      acceptClassName: "m-0",
-      rejectLabel: "Cancel",
-      draggable: false,
-      accept: () => {
-        setProducts((prev) => prev.filter((p) => p.id !== rowData.id));
-        toast.current?.show({
-          severity: "success",
-          summary: "Deleted",
-          detail: "Item removed",
-        });
-      },
-    });
-  };
-
-  const saveRow = () => {
+  const saveRow = async () => {
     if (
       !editingRow.name?.trim() ||
       !editingRow.author?.trim() ||
@@ -120,57 +98,90 @@ export default function Book() {
       return;
     }
 
-    if (!editingRow) return;
-    let updated;
-    if (editingRow._isNew) {
-      updated = [...products, { ...editingRow }];
-      delete updated[updated.length - 1]._isNew;
-    } else {
-      updated = products.map((p) => (p.id === editingRow.id ? editingRow : p));
+    try {
+      if (editingRow._isNew) {
+        createBook({
+          variables: {
+            name: editingRow.name,
+            category: editingRow.category,
+            author: editingRow.author,
+            total: editingRow.count,
+          },
+          refetchQueries: [{ query: GET_BOOKS }],
+          awaitRefetchQueries: true,
+        });
+        setEditingRow(null);
+        setVisible(false);
+        toast.current?.show({
+          severity: "success",
+          summary: "Saved",
+          detail: "New book added.",
+        });
+      } else {
+        const updates = {};
+        if (editingRow.name !== originalRow.name)
+          updates.name = editingRow.name;
+        if (editingRow.category !== originalRow.category)
+          updates.category = editingRow.category;
+        if (editingRow.author !== originalRow.author)
+          updates.author = editingRow.author;
+        if (editingRow.count !== originalRow.count)
+          updates.total = editingRow.count;
+
+        await updateBook({
+          variables: {
+            id: editingRow.id,
+            ...updates,
+          },
+          refetchQueries: [{ query: GET_BOOKS }],
+          awaitRefetchQueries: true,
+        });
+        setOriginalRow(null);
+        setVisible(false);
+        toast.current?.show({
+          severity: "success",
+          summary: "Saved",
+          detail: "changes saved.",
+        });
+      }
+    } catch (err) {
+      toast.current?.show({
+        severity: "error",
+        summary: "Error",
+        detail: err.message,
+      });
     }
+  };
 
-    createBook({
-      variables: {
-        name: editingRow.name,
-        category: editingRow.category,
-        author: editingRow.author,
-        total: editingRow.count,
+  const confirmDelete = async (rowData) => {
+    confirmDialog({
+      message: `Delete "${rowData.name || "this item"}"?`,
+      header: "Delete Confirmation",
+      headerClassName: "pr-8",
+      // icon: "pi pi-trash text-red-600 text-[10px]",
+      icon: (
+        <i className="pi pi-trash text-red-600" style={{ fontSize: "18px" }} />
+      ),
+      acceptLabel: "Delete",
+      acceptClassName: "m-0",
+      rejectLabel: "Cancel",
+      draggable: false,
+      accept: async () => {
+        await deleteBook({
+          variables: { id: rowData.id },
+          refetchQueries: [{ query: GET_BOOKS }],
+          awaitRefetchQueries: true,
+        });
+        toast.current?.show({
+          severity: "success",
+          summary: "Deleted",
+          detail: "Book removed",
+        });
       },
-    });
-
-    setProducts(updated);
-    setVisible(false);
-    toast.current?.show({
-      severity: "success",
-      summary: "Saved",
-      detail: "Row saved",
     });
   };
 
   /* ---------- Helpers ---------- */
-  const getStatus = (available) => {
-    if (available == 0) return "UNAVAILABLE";
-    return "AVAILABLE";
-  };
-
-  const statusBody = (rowData) => {
-    const status = getStatus(rowData.available);
-    const classes =
-      status === "AVAILABLE"
-        ? "bg-green-100 text-green-800"
-        : "bg-red-100 text-red-800";
-
-    return (
-      <span
-        className={`inline-block px-2 py-1 rounded text-xs font-medium ${classes}`}
-      >
-        {status}
-      </span>
-    );
-  };
-
-  const serialBody = (rowData, options) => first + options.rowIndex + 1;
-
   const onGlobalFilterChange = (e) => {
     const value = e.target.value;
     const _filters = { ...filters };
@@ -239,27 +250,27 @@ export default function Book() {
             <DataTable
               value={data.books}
               dataKey="id"
-              paginator={products.length > 0}
               draggable={false}
-              rows={10}
-              alwaysShowPaginator={true}
               paginatorClassName="mt-3 "
+              paginator={data.books.length > 5}
+              rows={5}
+              rowsPerPageOptions={[5, 10, 20, 50]}
+              alwaysShowPaginator={true}
               first={first}
               removableSort
               size="small"
               stripedRows
               onPage={onPage} //for when adding new coloumn new added will be listed at last
-              rowsPerPageOptions={[5, 10, 20, 50]}
               filters={filters}
-              globalFilterFields={["name", "category"]}
-              emptyMessage="No inventory found."
+              globalFilterFields={["name", "category", "author"]}
+              emptyMessage="No books found."
               tableStyle={{ minWidth: "70rem", tableLayout: "fixed" }}
               className="min-h-full h-[72vh] overflow-auto !text-[14px] !font-[poppins]"
             >
               <Column
                 header="S.No"
                 headerClassName="font-[poppins]"
-                body={serialBody}
+                body={(rowData, options) => first + options.rowIndex + 1}
                 alignHeader={"center"}
                 style={{
                   width: "5%",
@@ -275,6 +286,7 @@ export default function Book() {
                       className=" !bg-blue-500 !text-white flex items-center justify-center rounded-[6px] p-2.5 cursor-pointer"
                       onClick={() => {
                         setEditingRow(rowData);
+                        setOriginalRow({ ...rowData });
                         setVisible(true);
                       }}
                     >
@@ -338,20 +350,23 @@ export default function Book() {
                   textAlign: "center",
                 }}
               />
-              <Column
-                field="available"
-                header="Available Stock"
-                headerClassName="font-[poppins]"
-                alignHeader={"center"}
-                style={{
-                  width: "10%",
-                  textAlign: "center",
-                }}
-              />
+
               <Column
                 header="Status"
                 headerClassName="font-[poppins]"
-                body={statusBody}
+                body={(rowData) => {
+                  return (
+                    <div
+                      className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                        rowData.available > 0
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {rowData.available > 0 ? "AVAILABLE" : "UNAVAILABLE"}
+                    </div>
+                  );
+                }}
                 alignHeader={"center"}
                 style={{
                   // width: "15%",
@@ -362,6 +377,7 @@ export default function Book() {
           </>
         )}
       </div>
+
       {/* Edit/Add Modal */}
       <Dialog
         header={editingRow?._isNew ? "Add Book" : "Edit Book Details"}

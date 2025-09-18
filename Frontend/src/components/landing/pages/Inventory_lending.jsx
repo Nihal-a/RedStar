@@ -21,7 +21,7 @@ import {
 } from "../../graphql/mutations";
 
 export default function InventoryLending() {
-  //graphql
+  //queries
   const { data, loading, error, refetch } = useQuery(GET_INVENTORY_LENDING);
   const {
     data: categoryData,
@@ -30,6 +30,7 @@ export default function InventoryLending() {
     refetch: categoryFetch,
   } = useQuery(GET_CATEGORIES);
 
+  //mutations
   const [addInventoryLending] = useMutation(ADD_INVENTORY_LENDING);
   const [updateInventoryLending] = useMutation(UPDATE_INVENTORY_LENDING);
   const [returnInventoryLending] = useMutation(RETURN_INVENTORY_LENDING);
@@ -121,6 +122,11 @@ export default function InventoryLending() {
             lendedDate: normalizedLendedDate,
             remarks: editingRow.remarks || null,
           },
+          refetchQueries: [
+            { query: GET_INVENTORY_LENDING },
+            { query: GET_CATEGORIES },
+          ],
+          awaitRefetchQueries: true,
         });
       } else {
         const newLendedDate = normalizeDate(editingRow.lendedDate);
@@ -162,6 +168,11 @@ export default function InventoryLending() {
               id: editingRow.id,
               ...updates,
             },
+            refetchQueries: [
+              { query: GET_INVENTORY_LENDING },
+              { query: GET_CATEGORIES },
+            ],
+            awaitRefetchQueries: true,
           });
         }
       }
@@ -175,8 +186,6 @@ export default function InventoryLending() {
             : "Inventory Saved successfully"
         }`,
       });
-      // categoryFetch();
-      // refetch()
     } catch (err) {
       toast.current?.show({
         severity: "error",
@@ -210,6 +219,11 @@ export default function InventoryLending() {
           remarks: returnRemarks,
           returnDate: date,
         },
+        refetchQueries: [
+          { query: GET_INVENTORY_LENDING },
+          { query: GET_CATEGORIES },
+        ],
+        awaitRefetchQueries: true,
       });
       setconfirmVisible(false);
       toast.current?.show({
@@ -224,8 +238,6 @@ export default function InventoryLending() {
         detail: err.message,
       });
     }
-    refetch();
-    categoryFetch();
   };
 
   const confirmDelete = (rowData) => {
@@ -244,7 +256,14 @@ export default function InventoryLending() {
       draggable: false,
       accept: async () => {
         try {
-          await deleteInventoryLending({ variables: { id: rowData.id } });
+          await deleteInventoryLending({
+            variables: { id: rowData.id },
+            refetchQueries: [
+              { query: GET_INVENTORY_LENDING },
+              { query: GET_CATEGORIES },
+            ],
+            awaitRefetchQueries: true,
+          });
 
           toast.current?.show({
             severity: "success",
@@ -372,7 +391,7 @@ export default function InventoryLending() {
               // onClick={exportPDF}
               className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center cursor-pointer"
             >
-              <i class="bi bi-file-earmark-pdf pr-1 "></i>
+              <i className="bi bi-file-earmark-pdf pr-1 "></i>
               Export pdf
             </button>
           </div>
@@ -388,8 +407,7 @@ export default function InventoryLending() {
           )
         ) : (
           <>
-            <div className="w-full p-5 bg-[#F9FAFB] mb-3 rounded-sm border-1 border-[#e6e6e6] flex justify-between">
-              <div className="opacity-0 ">o</div>
+            <div className="w-full p-5 bg-[#F9FAFB] mb-3 rounded-sm border-1 border-[#e6e6e6] flex justify-end">
               <div className="relative ">
                 <input
                   value={globalFilterValue}
@@ -459,10 +477,7 @@ export default function InventoryLending() {
                       <i className="bi bi-pencil  cursor-pointer text-blue-500 p-2 rounded bg-blue-100"></i>
                     </button>
                     <button onClick={() => confirmDelete(rowData)}>
-                      <i
-                        class="bi bi-trash leading-none"
-                        className="bi bi-trash  cursor-pointer text-red-500 p-2 rounded bg-red-100"
-                      ></i>
+                      <i className="bi bi-trash  cursor-pointer text-red-500 p-2 rounded bg-red-100"></i>
                     </button>
                     {rowData.status ? (
                       ""
@@ -654,13 +669,16 @@ export default function InventoryLending() {
               <InputText
                 value={editingRow.mobileNumber}
                 placeholder="Type lender mobile number..."
+                inputMode="numeric"
+                pattern="[0-9]*"
                 onChange={(e) => {
                   const val = e.target.value;
-                  if (/^\d{0,10}$/.test(val))
+                  if (/^\d{0,10}$/.test(val)) {
                     setEditingRow({
                       ...editingRow,
                       mobileNumber: e.target.value,
                     });
+                  }
                 }}
                 className="w-full placeholder:text-sm !p-1.5 !font-[poppins] !px-3"
               />
@@ -725,13 +743,20 @@ export default function InventoryLending() {
                   placeholder="Select inventory"
                   disabled={!editingRow.category} // Disable if no category selected
                 />
-                {editingRow.category && inventoryOptions.length < 1 ? (
-                  <label className="pl-3 text-[13px] text-red-500">
-                    items not available!
-                  </label>
-                ) : (
-                  ""
-                )}
+                {editingRow.category &&
+                  inventoryOptions.length < 1 &&
+                  categoryData?.categories.some(
+                    (cat) => cat.id.toString() === editingRow.category
+                  ) && (
+                    <label className="pl-3 text-[13px] text-red-500">
+                      {
+                        categoryData.categories.find(
+                          (cat) => cat.id.toString() === editingRow.category
+                        )?.name
+                      }{" "}
+                      not available!
+                    </label>
+                  )}
               </div>
             </div>
             <div>

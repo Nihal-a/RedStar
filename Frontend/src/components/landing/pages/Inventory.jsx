@@ -22,7 +22,7 @@ import {
 } from "../../graphql/mutations";
 
 export default function Inventory() {
-  //graphql
+  //queries
   const { data, loading, error, refetch } = useQuery(GET_INVENTORIES);
   const {
     data: categoryData,
@@ -30,7 +30,8 @@ export default function Inventory() {
     error: categoryError,
     refetch: categoryFetch,
   } = useQuery(GET_CATEGORIES);
-  
+
+  //mutations
   const [createInventory] = useMutation(CREATE_INVENTORY);
   const [DeleteInventory] = useMutation(DELETE_INVENTORY);
   const [createCategory] = useMutation(CREATE_CATEGORY);
@@ -42,6 +43,10 @@ export default function Inventory() {
   const [filters, setFilters] = useState({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
   });
+  const [categoryModalFilters, setCategoryModalFilters] = useState({
+    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  });
+  const [categoryModalFilterValue, setCategoryModalFilterValue] = useState("");
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [first, setFirst] = useState(0);
   const [rows, setRows] = useState(5);
@@ -80,28 +85,14 @@ export default function Inventory() {
           name: editingRow.name,
           category: editingRow.category,
         },
-        update: (cache, { data }) => {
-          if (!data?.createInventory) return;
-          const existing = cache.readQuery({ query: GET_INVENTORIES }) || {
-            inventories: [],
-          };
-          cache.writeQuery({
-            query: GET_INVENTORIES,
-            data: {
-              inventories: [
-                ...existing.inventories,
-                data.createInventory.inventory,
-              ],
-            },
-          });
-        },
+        refetchQueries: [{ query: GET_INVENTORIES }, { query: GET_CATEGORIES }],
+        awaitRefetchQueries: true,
       });
-
-      setVisible(false);
+      setEditingRow({ name: "", category: "" });
       toast.current?.show({
         severity: "success",
         summary: "Saved",
-        detail: "Inventory added successfully",
+        detail: "Inventory Added Succesfully",
       });
     } catch (err) {
       toast.current?.show({
@@ -127,21 +118,11 @@ export default function Inventory() {
       if (categoryRow) {
         await createCategory({
           variables: { name: categoryRow.name, image: categoryRow.image },
-          update: (cache, { data }) => {
-            if (!data?.createCategory) return;
-            const existing = cache.readQuery({ query: GET_CATEGORIES }) || {
-              categories: [],
-            };
-            cache.writeQuery({
-              query: GET_CATEGORIES,
-              data: {
-                categories: [
-                  ...existing.categories,
-                  data.createCategory.category,
-                ],
-              },
-            });
-          },
+          refetchQueries: [
+            { query: GET_CATEGORIES },
+            { query: GET_INVENTORIES },
+          ],
+          awaitRefetchQueries: true,
         });
         setcategoryRow({ name: "", image: null });
         toast.current?.show({
@@ -231,25 +212,45 @@ export default function Inventory() {
       rejectLabel: "Cancel",
       draggable: false,
       accept: async () => {
-        if (type === "inventory") {
-          await DeleteInventory({ variables: { id: rowData.id } });
-          refetch();
-          categoryFetch();
-        } else if (type === "category") {
-          await deleteCategory({ variables: { id: rowData.id } });
-          categoryFetch();
+        try {
+          if (type === "inventory") {
+            await DeleteInventory({
+              variables: { id: rowData.id },
+              refetchQueries: [
+                { query: GET_CATEGORIES },
+                { query: GET_INVENTORIES },
+              ],
+              awaitRefetchQueries: true,
+            });
+          } else if (type === "category") {
+            await deleteCategory({
+              variables: { id: rowData.id },
+              refetchQueries: [
+                { query: GET_CATEGORIES },
+                { query: GET_INVENTORIES },
+              ],
+              awaitRefetchQueries: true,
+            });
+          }
+          toast.current?.show({
+            severity: "success",
+            summary: "Deleted",
+            detail: `${
+              type === "inventory" ? "Inventory" : "Category"
+            } removed`,
+          });
+        } catch (err) {
+          toast.current?.show({
+            severity: "error",
+            summary: "Error",
+            detail: err.message,
+          });
         }
-
-        toast.current?.show({
-          severity: "success",
-          summary: "Deleted",
-          detail: `${type === "inventory" ? "Inventory" : "Category"} removed`,
-        });
       },
     });
   };
 
-  //dropdownoptions in category select when adding a inventory
+  //dropdownoptions in category select when adding a inventory in albhepetical order
   const categoryOptions = categoryLoading
     ? [{ label: "Select Category", value: "" }]
     : [
@@ -259,19 +260,33 @@ export default function Inventory() {
             (cat, index, self) =>
               cat && self.findIndex((c) => c.id === cat.id) === index
           )
+          .slice()
+          .sort((a, b) =>
+            a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+          )
           .map((cat) => ({
             label: cat.name,
             value: cat.id.toString(),
           })) || []),
       ];
 
-  //searching filteration
+  //searching filteration global datatable
   const onGlobalFilterChange = (e) => {
     const value = e.target.value;
     const _filters = { ...filters };
     _filters["global"].value = value;
     setFilters(_filters);
-    setGlobalFilterValue(value);
+    setcategoryFilterValue(value);
+  };
+
+  //searching filteration category datatable
+  const onCategoryModalFilterChange = (e) => {
+    const value = e.target.value;
+    const _filters = { ...categoryModalFilters };
+    _filters["global"].value = value;
+
+    setCategoryModalFilters(_filters);
+    setCategoryModalFilterValue(value);
   };
 
   //for when adding new coloumn new added will be listed at last
@@ -332,8 +347,7 @@ export default function Inventory() {
           )
         ) : (
           <>
-            <div className="w-full p-5 bg-[#F9FAFB] mb-3 rounded-sm border-1 border-[#e6e6e6] flex justify-between">
-              <div className="opacity-0 ">o</div>
+            <div className="w-full p-5 bg-[#F9FAFB] mb-3 rounded-sm border-1 border-[#e6e6e6] flex justify-end">
               <div className="relative ">
                 <input
                   value={globalFilterValue}
@@ -376,7 +390,7 @@ export default function Inventory() {
                 header="S.No"
                 headerClassName="font-[poppins]"
                 body={(rowData, options) => options.rowIndex + 1}
-                alignHeader={"DD"}
+                alignHeader={"center"}
                 style={{
                   width: "5%",
                   textAlign: "center",
@@ -397,7 +411,7 @@ export default function Inventory() {
                 )}
                 alignHeader="center"
                 style={{
-                  width: "5%",
+                  width: "7%",
                   textAlign: "center",
                 }}
               />
@@ -436,8 +450,16 @@ export default function Inventory() {
               />
 
               <Column
-                field="total"
                 header="Total Stock"
+                body={(rowData) => {
+                  const totalCount = rowData?.inventories?.length || 0;
+
+                  return (
+                    <div className="inline-block px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                      {totalCount}
+                    </div>
+                  );
+                }}
                 headerClassName="font-[poppins]"
                 alignHeader={"center"}
                 style={{
@@ -447,15 +469,17 @@ export default function Inventory() {
               />
 
               <Column
-                field="available"
                 header="Avail Stock"
                 body={(rowData) => {
                   const availableCount =
                     rowData?.inventories?.filter(
                       (inv) => inv.status === true || inv.status === 1
                     ).length || 0;
-
-                  return <span>{availableCount}</span>;
+                  return (
+                    <div className="inline-block px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                      {availableCount}
+                    </div>
+                  );
                 }}
                 sortable
                 headerClassName="font-[poppins]"
@@ -470,15 +494,20 @@ export default function Inventory() {
                 header="Status"
                 headerClassName="font-[poppins]"
                 body={(rowData) => {
+                  const availableCount =
+                    rowData?.inventories?.filter(
+                      (inv) => inv.status === true || inv.status === 1
+                    ).length || 0;
+
                   return (
                     <div
                       className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-                        rowData.available > 0
+                        availableCount > 0
                           ? "bg-green-100 text-green-800"
                           : "bg-red-100 text-red-800"
                       }`}
                     >
-                      {rowData.available > 0 ? "AVAILABLE" : "UNAVAILABLE"}
+                      {availableCount > 0 ? "AVAILABLE" : "UNAVAILABLE"}
                     </div>
                   );
                 }}
@@ -568,7 +597,7 @@ export default function Inventory() {
         modal
         onHide={() => setcategoryModalVisible(false)}
       >
-        <div className="w-full flex flex-col gap-3">
+        <div className="w-full flex flex-col gap-1">
           <div className="w-full">
             <label className="block text-sm font-medium mb-1">
               Category Name*
@@ -626,6 +655,19 @@ export default function Inventory() {
                 </div>
               )}
             </div>
+            <div className="mt-4 flex justify-end">
+              {" "}
+              <div className="relative ">
+                <input
+                  value={categoryModalFilterValue}
+                  onChange={onCategoryModalFilterChange}
+                  type="text"
+                  placeholder="Search..."
+                  className="w-full py-1.5 pl-8  pr-3 text-sm rounded-md ring-1 ring-gray-300  focus:outline-none"
+                />
+                <i className="bi bi-search  absolute left-[10px] top-[50%] translate-y-[-50%] text-[14px] text-black"></i>
+              </div>
+            </div>
           </div>
           {categoryLoading || categoryError ? (
             categoryLoading ? (
@@ -644,7 +686,8 @@ export default function Inventory() {
                 size="small"
                 stripedRows
                 onPage={onPage}
-                filters={filters}
+                filters={categoryModalFilters}
+                globalFilterFields={["name"]}
                 emptyMessage="No categories listed."
                 tableStyle={{
                   minWidth: "30rem",

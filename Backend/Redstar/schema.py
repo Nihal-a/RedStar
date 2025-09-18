@@ -5,11 +5,28 @@ from graphene_django.types import DjangoObjectType
 from .models import *
 from graphene_file_upload.scalars import Upload
 from django.conf import settings
+from datetime import datetime
 
-class BookType(DjangoObjectType):
-    class Meta:
-        model = Books
-        fields = ("id", "name", "author", "category", "total", "available")
+
+def MembershipIdGenerator(last_id=None):
+    prefix = "BMLIB" 
+    date_code = datetime.now().strftime("%m%y")
+
+    if last_id:
+        last_prefix_date, last_serial = last_id.split("-")
+        last_date_code = last_prefix_date[len(prefix):]
+
+        if last_date_code == date_code:
+            new_serial= int(last_serial) + 1
+        else:
+            new_serial = 1 
+            
+    else:
+        new_serial = 1
+    
+    serial_str = str(new_serial).zfill(4)
+    print(f"{prefix}{date_code}-{serial_str}")
+    return f"{prefix}{date_code}-{serial_str}"
 class InventoryType(DjangoObjectType):
     class Meta:
         model = Inventory
@@ -17,7 +34,7 @@ class InventoryType(DjangoObjectType):
 class CategoryType(DjangoObjectType):
     class Meta:
         model = Category
-        fields = ("id", "name", "total", "available", "image", "inventories")
+        fields = ("id", "name", "image", "inventories")
 
     # image_url = graphene.String()
 
@@ -32,6 +49,16 @@ class InventoryLendingType(DjangoObjectType):
         model = InventoryLending
         fields = ("id", "name", "mobileNumber", "inventory", "address", "lendedDate", "returnDate", "remarks", "status")
 
+class BookType(DjangoObjectType):
+    class Meta:
+        model = Books
+        fields = ("id", "name", "author", "category", "total", "available")
+
+class MembershipsType(DjangoObjectType):
+    class Meta:
+        model = Memberships
+        fields = ("id", "membershipId", "name", "profile", "mobileNumber",  "address",  "status")
+
 class CountsType(graphene.ObjectType):
     inventories = graphene.Int()
     categories = graphene.Int()
@@ -42,6 +69,7 @@ class Query(graphene.ObjectType):
     categories = graphene.List(CategoryType)
     inventory_lending = graphene.List(InventoryLendingType)
     counts = graphene.Field(CountsType)
+    memberships = graphene.List(MembershipsType)
 
     def resolve_categories(root, info):
         return Category.objects.all()
@@ -54,6 +82,9 @@ class Query(graphene.ObjectType):
     
     def resolve_books(root, info):
         return Books.objects.all()
+    
+    def resolve_memberships(root, info):
+        return Memberships.objects.all()
     
     def resolve_counts(root, info):
         return {
@@ -76,10 +107,7 @@ class CreateInventory(graphene.Mutation):
             raise GraphQLError(f"Product with name '{name}' already exists.")
         
         category_obj = Category.objects.get(pk=int(category))
-        category_obj.total += 1
-        category_obj.available += 1
-        category_obj.save()
-        
+    
         inventory = Inventory.objects.create(name=name, category=category_obj,  )
         return CreateInventory(inventory=inventory)
 class UpdateInventory(graphene.Mutation):
@@ -110,15 +138,8 @@ class DeleteInventory(graphene.Mutation):
     def mutate(self, info, id):
         try:
             inventory = Inventory.objects.get(pk=id)
-            category_id = inventory.category.id
-            category = Category.objects.get(id=category_id)  # fixed get() call
-            
-            if category.total > 0:
-                category.total -= 1
-            if category.available > 0:
-                category.available -= 1
-            
-            category.save()
+            if inventory.status == 0:  
+                raise Exception("Selected inventory is lended already, not returned.")
             inventory.delete()
 
             return DeleteInventory(ok=True)
@@ -141,8 +162,6 @@ class CreateCategory(graphene.Mutation):
         # Create the category
         category = Category.objects.create(
             name=name, 
-            total=0, 
-            available=0, 
             image=image
         )
         
@@ -248,6 +267,7 @@ class UpdateInventoryLending(graphene.Mutation):
 
         lending.save()
         return UpdateInventoryLending(inventory_lending=lending)
+    
 class ReturnInventoryLending(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
@@ -290,20 +310,96 @@ class DeleteInventoryLending(graphene.Mutation):
         except InventoryLending.DoesNotExist:
             raise Exception("Lending record not found.")
     
+class AddMembership(graphene.Mutation):
+    class Arguments:
+        name = graphene.String(required = True)
+        address = graphene.String(required = True)
+        mobileNumber = graphene.String(required = True)
+        profile =graphene.String()
+
+
+    memberships = graphene.Field(MembershipsType)
+
+    def mutate(root, info, name, address, mobileNumber ):
+
+        last_obj = Memberships.objects.order_by("-membershipId").first()
+        if last_obj:
+            MembershipIdGenerator(last_obj.membershipId)
+        memberships = Memberships.objects.create(name=name, address=address, mobileNumber=mobileNumber, status=True)
+        return AddMembership(memberships=memberships)
+    
+
+class UpdateMembership(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID(required = True)
+        name = graphene.String()
+        address = graphene.String()
+        mobileNumber = graphene.String()
+        profile =graphene.String()
+
+
+    memberships = graphene.Field(MembershipsType)
+
+    def mutate(root, info, id, **kwargs ):
+        memberships = Memberships.objects.get(pk=int(id))
+
+        for field, value in kwargs.items():
+            if value is not None: 
+                setattr(memberships, field, value)
+        
+        memberships.save()
+        return UpdateMembership(memberships=memberships)
+    
+class DeleteMembership(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+
+    ok = graphene.Boolean()
+
+    def mutate(self, info, id):
+        try:
+            membership = Memberships.objects.get(pk=id)
+            membership.delete()
+            return DeleteMembership(ok=True)
+        except Memberships.DoesNotExist:
+            return DeleteMembership(ok=False)
+
+    
 class CreateBook(graphene.Mutation):
     class Arguments:
-        name = graphene.String(required=True)
-        author = graphene.String(required=True)
-        category = graphene.String(required=True)
-        total = graphene.Int(required=True)
-        available = graphene.Int(required=False)
+        name = graphene.String(required = True)
+        author = graphene.String(required = True)
+        category = graphene.String(required = True)
+        total = graphene.Int(required = True)
 
     book = graphene.Field(BookType)
 
-    def mutate(root, info, name, author, category, total, ):
+    def mutate(root, info, name, author, category, total ):
         book = Books.objects.create(name=name, category=category, author=author, total=total, available=total )
         return CreateBook(book=book)
    
+
+class UpdateBook(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+        name = graphene.String()
+        author = graphene.String()
+        category = graphene.String()
+        total = graphene.Int()
+
+    book = graphene.Field(BookType)
+
+    def mutate(root, info, id, **kwargs):
+        book = Books.objects.get(pk=int(id))
+
+        for field, value in kwargs.items():
+            if value is not None: 
+                setattr(book, field, value)
+        
+        book.save()
+        return UpdateBook(book=book)
+    
+
 class DeleteBook(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
@@ -335,8 +431,13 @@ class Mutation(graphene.ObjectType):
     return_inventory_lending = ReturnInventoryLending.Field()
     delete_inventory_lending = DeleteInventoryLending.Field()
 
+    add_membership = AddMembership.Field()
+    update_membership = UpdateMembership.Field()
+    delete_membership = DeleteMembership.Field()
+
     create_book = CreateBook.Field()
     delete_book = DeleteBook.Field()
+    update_book = UpdateBook.Field()
     
 
 

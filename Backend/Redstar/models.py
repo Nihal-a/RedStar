@@ -43,8 +43,6 @@ class User(AbstractBaseUser,PermissionsMixin):
 
 class Category(models.Model):
     name = models.CharField( max_length=100, null=False)
-    total = models.IntegerField(null=False, blank=False)
-    available = models.IntegerField(null=True, blank=True)
     image = models.TextField(blank=True, null=True)
 
 class Inventory(models.Model):
@@ -67,7 +65,8 @@ class Books(models.Model):
     author = models.CharField(max_length=100, null=True, blank=True)
     category = models.CharField(max_length=100, null=True, blank=True)
     total = models.IntegerField(null=False, blank=False)
-    available = models.IntegerField(null=True, blank=True)
+    available = models.IntegerField(null=False, blank=False)
+
 
 class BooksLending(models.Model):
     name = models.CharField(max_length=100, null=False, blank=False)
@@ -79,3 +78,11 @@ class BooksLending(models.Model):
     return_date = models.DateField(null=True, blank=True)
     remarks = models.CharField(max_length=200, null=True, blank=True)
     status = models.BooleanField(default=False)
+
+class Memberships(models.Model):
+    membershipId = models.TextField(max_length=20, null=False, blank=False, unique=True)
+    name = models.CharField(max_length=100, null=False, blank=False)
+    profile = models.TextField(blank=True, null=True)
+    address = models.CharField(max_length=200, null=False, blank=False)
+    mobileNumber = models.CharField(max_length=15, null=False, blank=False)
+    status = models.BooleanField()

@@ -9,10 +9,13 @@ import { Toast } from "primereact/toast";
 import { ConfirmDialog, confirmDialog } from "primereact/confirmdialog";
 import { Dialog } from "primereact/dialog";
 import { FilterMatchMode } from "primereact/api";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-import redstar_logo_copy from "../../../assets/redstar_logo_copy.jpg";
-
+import { useQuery, useMutation } from "@apollo/client/react";
+import { GET_MEMEBRSHIPS } from "../../graphql/queries";
+import {
+  ADD_MEMBERSHIP,
+  DELETE_MEMBERSHIP,
+  UPDATE_MEMBERSHIP,
+} from "../../graphql/mutations";
 // Dummy ProductService
 const ProductService = {
   getProductsMini() {
@@ -48,17 +51,16 @@ const ProductService = {
   },
 };
 
-const resolveImageSrc = (image) => {
-  if (!image) return "";
-  if (
-    typeof image === "string" &&
-    (image.startsWith("http") || image.startsWith("data:"))
-  )
-    return image;
-  return `https://primefaces.org/cdn/primereact/images/product/${image}`;
-};
-
 export default function Membership() {
+  //queries
+  const { data, loading, error } = useQuery(GET_MEMEBRSHIPS);
+
+  //mutations
+  const [addMembership] = useMutation(ADD_MEMBERSHIP);
+  const [updateMembership] = useMutation(UPDATE_MEMBERSHIP);
+  const [DeleteMembership] = useMutation(DELETE_MEMBERSHIP);
+
+  //
   const [products, setProducts] = useState([]);
   const [filters, setFilters] = useState({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
@@ -66,12 +68,12 @@ export default function Membership() {
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [first, setFirst] = useState(0);
-  const [rows, setRows] = useState(8);
+  const [rows, setRows] = useState(5);
 
   // Modal states
   const [visible, setVisible] = useState(false);
   const [editingRow, setEditingRow] = useState(null);
-
+  const [originalRow, setOriginalRow] = useState(null);
   const toast = useRef(null);
 
   useEffect(() => {
@@ -81,119 +83,14 @@ export default function Membership() {
     });
   }, []);
 
-  /* ---------- PDF export ---------- */
-  const exportPDF = () => {
-    const doc = new jsPDF("p", "pt");
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(20);
-    doc.setTextColor(224, 21, 20);
-    doc.text("INVENTORY REPORT", pageWidth - 40, 40, {
-      align: "right",
-    });
-
-    doc.addImage(redstar_logo_copy, "PNG", 32, 20, 50, 50);
-
-    //adrees and reg no
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(14);
-    doc.setTextColor(0, 0, 0);
-    doc.text(
-      [
-        "Reg No:",
-        " ",
-        "Mukkilapeedika, Punnathala,",
-        "Malappuram, Kerala, 676552",
-      ],
-      40,
-      100
-    );
-
-    // Subtitle
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    doc.setTextColor(0, 0, 0);
-    doc.text("Generated on: 04 Sep 2025", 450, 100);
-
-    //footer
-    const footerHeight = 13;
-    const bottomMargin = 8;
-    const y = 60;
-
-    doc.setFillColor(224, 21, 20);
-    doc.rect(
-      0,
-      pageHeight - footerHeight - bottomMargin,
-      pageWidth,
-      footerHeight,
-      "F"
-    ); // footer bar
-    doc.setTextColor(255, 255, 255); // white text
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.text("📞 +91 9876543210", 40, y, { align: "left" });
-    doc.text("John Doe", pageWidth / 2, y, { align: "center" });
-    doc.text("✉️ john@example.com", pageWidth - 40, y, { align: "right" });
-    // Table headers & data
-    const headers = [["S.No", "Name", "Category", "Count", "Avail Count"]];
-    const data = products.map((p, index) => [
-      index + 1,
-      p.name || "—",
-      p.mobilenumber || "—",
-      p.count ?? "_",
-      p.available ?? "_",
-    ]);
-
-    autoTable(doc, {
-      head: headers,
-      headStyles: {
-        fillColor: [224, 21, 20],
-        textColor: 255,
-        fontStyle: "extrabold",
-        halign: "center",
-      },
-      body: data,
-      startY: 200,
-      margin: { left: 32 },
-      theme: "grid",
-      styles: {
-        fontSize: 12,
-        cellWidth: "wrap",
-        overflow: "linebreak",
-      },
-      columnStyles: {
-        1: { cellWidth: 180 },
-        2: { cellWidth: 200 },
-      },
-      didDrawPage: () => {
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const pageHeight = doc.internal.pageSize.getHeight();
-
-        const wmWidth = 300;
-        const wmHeight = 300;
-
-        const x = (pageWidth - wmWidth) / 2;
-        const y = (pageHeight - wmHeight) / 2;
-
-        doc.setGState(new doc.GState({ opacity: 0.1 }));
-        doc.addImage(redstar_logo_copy, "JPG", x, y, wmWidth, wmHeight);
-
-        doc.setGState(new doc.GState({ opacity: 1 }));
-      },
-    });
-
-    doc.save("inventory.pdf");
-  };
   /* ---------- CRUD ---------- */
   const addRow = () => {
     setEditingRow({
       id: Date.now(),
       name: "",
-      moblenumber: "",
+      mobileNumber: "",
       profie: "",
-      address: 0,
+      address: "",
       membershipid: "",
       status: 0,
       _isNew: true,
@@ -203,7 +100,7 @@ export default function Membership() {
 
   const confirmDelete = (rowData) => {
     confirmDialog({
-      message: `Delete "${rowData.name || "this item"}"?`,
+      message: `Delete ${rowData.name || "this person's"}'s Membership ?`,
       header: "Delete Confirmation",
       headerClassName: "pr-8",
       // icon: "pi pi-trash text-red-600 text-[10px]",
@@ -214,51 +111,105 @@ export default function Membership() {
       acceptClassName: "m-0",
       rejectLabel: "Cancel",
       draggable: false,
-      accept: () => {
-        setProducts((prev) => prev.filter((p) => p.id !== rowData.id));
-        toast.current?.show({
-          severity: "success",
-          summary: "Deleted",
-          detail: "Item removed",
-        });
+      accept: async () => {
+        try {
+          await DeleteMembership({
+            variables: { id: rowData.id },
+            refetchQueries: [{ query: GET_MEMEBRSHIPS }],
+            awaitRefetchQueries: true,
+          });
+
+          toast.current?.show({
+            severity: "success",
+            summary: "Deleted",
+            detail: "Membership removed",
+          });
+        } catch (err) {
+          toast.current?.show({
+            severity: "error",
+            summary: "Error",
+            detail: err.message || "Error at membership deletion.",
+          });
+        }
       },
     });
   };
 
-  const saveRow = () => {
-    if (!editingRow) return;
-    let updated;
-    if (editingRow._isNew) {
-      updated = [...products, { ...editingRow }];
-      delete updated[updated.length - 1]._isNew;
-    } else {
-      updated = products.map((p) => (p.id === editingRow.id ? editingRow : p));
+  const saveRow = async () => {
+    console.log(editingRow);
+    if (
+      !editingRow.name?.trim() ||
+      !editingRow.address?.trim() ||
+      !editingRow.mobileNumber
+    ) {
+      toast.current?.show({
+        severity: "warn",
+        summary: "Validation",
+        detail: "Please fill in all required fields",
+      });
+      return;
     }
-    setProducts(updated);
-    setVisible(false);
-    toast.current?.show({
-      severity: "success",
-      summary: "Saved",
-      detail: "Row saved",
-    });
+    if (!/^\d{10}$/.test(editingRow.mobileNumber)) {
+      toast.current?.show({
+        severity: "warn",
+        summary: "Validation",
+        detail: "Mobile number must be exactly 10 digits.",
+      });
+      return;
+    }
+
+    if (!editingRow) return;
+    try {
+      if (editingRow._isNew) {
+        // CREATE
+        await addMembership({
+          variables: {
+            name: editingRow.name,
+            address: editingRow.address,
+            mobileNumber: editingRow.mobileNumber,
+          },
+          refetchQueries: [{ query: GET_MEMEBRSHIPS }],
+          awaitRefetchQueries: true,
+        });
+        setVisible(false);
+        setEditingRow(null);
+        toast.current?.show({
+          severity: "success",
+          summary: "Saved",
+          detail: "Member Added",
+        });
+      } else {
+        const updates = {};
+        if (editingRow.name !== originalRow.name)
+          updates.name = editingRow.name;
+        if (editingRow.mobileNumber !== originalRow.mobileNumber)
+          updates.mobileNumber = editingRow.mobileNumber;
+        if (editingRow.address !== originalRow.address)
+          updates.address = editingRow.address;
+        console.log(updates);
+        await updateMembership({
+          variables: {
+            id: editingRow.id,
+            ...updates,
+          },
+          refetchQueries: [{ query: GET_MEMEBRSHIPS }],
+          awaitRefetchQueries: true,
+        });
+        setVisible(false);
+        toast.current?.show({
+          severity: "success",
+          summary: "Saved",
+          detail: "Changes saved.",
+        });
+      }
+    } catch (err) {
+      toast.current?.show({
+        severity: "error",
+        summary: "Error",
+        detail: err.message,
+      });
+    }
   };
-
-  const statusBody = (rowData) => {
-    const classes =
-      rowData.status === "Active"
-        ? "bg-green-100 text-green-800"
-        : "bg-red-100 text-red-800";
-
-    return (
-      <span
-        className={`inline-block px-2 py-1 rounded text-xs font-medium ${classes}`}
-      >
-        {rowData.status}
-      </span>
-    );
-  };
-
-  const serialBody = (rowData, options) => first + options.rowIndex + 1;
 
   const onGlobalFilterChange = (e) => {
     const value = e.target.value;
@@ -297,7 +248,7 @@ export default function Membership() {
               Add Membership
             </button>
             <button
-              onClick={exportPDF}
+              // onClick={exportPDF}
               className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center cursor-pointer"
             >
               <i class="bi bi-file-earmark-pdf pr-1 "></i>
@@ -308,164 +259,174 @@ export default function Membership() {
       </div>
 
       <div className="bg-white rounded-lg shadow-md p-4 ">
-        <div className="w-full p-5 bg-[#F9FAFB] mb-3 rounded-sm border-1 border-[#e6e6e6] flex justify-between">
-          <div className="opacity-0 ">o</div>
-          <div className="relative ">
-            <input
-              value={globalFilterValue}
-              onChange={onGlobalFilterChange}
-              type="text"
-              placeholder="Search..."
-              className="w-full py-2 pl-8  pr-3 text-sm rounded-md ring-1 ring-gray-300  focus:outline-none"
-            />
-            <i className="bi bi-search  absolute left-[10px] top-[50%] translate-y-[-50%] text-[14px] text-black"></i>
-          </div>
-        </div>
-
-        <DataTable
-          value={products}
-          dataKey="id"
-          paginator
-          rows={10}
-          alwaysShowPaginator={true}
-          paginatorClassName="mt-3 "
-          first={first}
-          removableSort
-          selection={selectedProducts} // <-- bind selected rows
-          onSelectionChange={(e) => setSelectedProducts(e.value)} // <-- update state
-          selectionMode="multiple"
-          rowClassName={(rowData) =>
-            selectedProducts?.some((p) => p.id === rowData.id)
-              ? "!bg-[#e0141415] !text-[#E01514] !"
-              : ""
-          }
-          size="small"
-          stripedRows
-          onPage={onPage} //for when adding new coloumn new added will be listed at last
-          rowsPerPageOptions={[5, 10, 20, 50]}
-          filters={filters}
-          globalFilterFields={["name", "category"]}
-          emptyMessage="No inventory found."
-          tableStyle={{ minWidth: "70rem", tableLayout: "fixed" }}
-          className="min-h-full h-[72vh] overflow-auto !text-[14px] !font-[poppins]"
-        >
-          <Column
-            selectionMode="multiple"
-            headerStyle={{ width: "2%" }}
-            className=""
-          />
-          <Column
-            header="S.No"
-            headerClassName="font-[poppins]"
-            body={serialBody}
-            alignHeader={"center"}
-            style={{
-              width: "5%",
-              textAlign: "center",
-            }}
-          />
-          <Column
-            header="Actions"
-            headerClassName="font-[poppins]"
-            body={(rowData) => (
-              <div className="w-full flex items-center justify-center gap-2">
-                <button
-                  className=" !bg-blue-500 !text-white flex items-center justify-center rounded-[6px] p-2.5 cursor-pointer"
-                  onClick={() => {
-                    setEditingRow(rowData);
-                    setVisible(true);
-                  }}
-                >
-                  <i class="bi bi-pencil leading-none"></i>
-                </button>
-                <button
-                  className=" !bg-red-500 !text-white flex items-center justify-center rounded-[6px] p-2.5 cursor-pointer"
-                  onClick={() => confirmDelete(rowData)}
-                >
-                  <i class="bi bi-trash leading-none"></i>
-                </button>
+        {loading || error ? (
+          loading ? (
+            <p>Loading inventories...</p>
+          ) : (
+            <p>Error: {error.message}</p>
+          )
+        ) : (
+          <>
+            <div className="w-full p-5 bg-[#F9FAFB] mb-3 rounded-sm border-1 border-[#e6e6e6] flex justify-between">
+              <div className="opacity-0 ">o</div>
+              <div className="relative ">
+                <input
+                  value={globalFilterValue}
+                  onChange={onGlobalFilterChange}
+                  type="text"
+                  placeholder="Search..."
+                  className="w-full py-2 pl-8  pr-3 text-sm rounded-md ring-1 ring-gray-300  focus:outline-none"
+                />
+                <i className="bi bi-search  absolute left-[10px] top-[50%] translate-y-[-50%] text-[14px] text-black"></i>
               </div>
-            )}
-            alignHeader={"center"}
-            style={{
-              width: "10%",
-              textAlign: "center",
-            }}
-          />
-          <Column
-            field="membershipid"
-            header="Membership Id"
-            headerClassName="font-[poppins]"
-            sortable
-            alignHeader={"center"}
-            style={{
-              textAlign: "center",
-            }}
-          />
-          <Column
-            header="Profile"
-            headerClassName=""
-            body={(rowData) => (
-              <img
-                src={resolveImageSrc(rowData.profile)}
-                alt="item"
-                className="mx-auto w-10 h-10 object-cover rounded-[6px]"
+            </div>
+            <DataTable
+              value={data.memberships}
+              dataKey="id"
+              alwaysShowPaginator={false}
+              paginatorClassName="mt-3"
+              paginator={data.memberships > 5}
+              rowsPerPageOptions={[5, 10, 20, 50]}
+              rows={rows}
+              first={first}
+              removableSort
+              onSelectionChange={(e) => setSelectedProducts(e.value)} // <-- update state
+              size="small"
+              stripedRows
+              onPage={onPage} //for when adding new coloumn new added will be listed at last
+              filters={filters}
+              globalFilterFields={["name", "mobileNumber", "address"]}
+              emptyMessage="No Membership found."
+              tableStyle={{ minWidth: "70rem", tableLayout: "fixed" }}
+              className="min-h-full h-[72vh] overflow-auto !text-[14px] !font-[poppins]"
+            >
+              <Column
+                header="S.No"
+                headerClassName="font-[poppins]"
+                body={(rowData, options) => first + options.rowIndex + 1}
+                alignHeader={"center"}
+                style={{
+                  width: "5%",
+                  textAlign: "center",
+                }}
               />
-            )}
-            bodyClassName="text-center"
-            alignHeader={"center"}
-            style={{
-              // width: "10%",
-              textAlign: "center",
-            }}
-          />
-          <Column
-            field="name"
-            header="Name"
-            headerClassName="font-[poppins]"
-            sortable
-            alignHeader={"center"}
-            style={{
-              // width: "15%",
-              textAlign: "center",
-            }}
-          />
-          <Column
-            field="mobilenumber"
-            header="Contact Number"
-            headerClassName="font-[poppins]"
-            alignHeader={"center"}
-            style={{
-              // width: "15%",
-              textAlign: "center",
-            }}
-          />
-          <Column
-            field="address"
-            header="Address"
-            headerClassName="font-[poppins]"
-            alignHeader={"center"}
-            style={{
-              width: "10%",
-              textAlign: "center",
-            }}
-          />
-          <Column
-            header="Status"
-            headerClassName="font-[poppins]"
-            body={statusBody}
-            alignHeader={"center"}
-            style={{
-              // width: "15%",
-              textAlign: "center",
-            }}
-          />
-        </DataTable>
+              <Column
+                header="Actions"
+                headerClassName="font-[poppins]"
+                body={(rowData) => (
+                  <div className="w-full flex items-center justify-center gap-2">
+                    <button
+                      className=" !bg-blue-500 !text-white flex items-center justify-center rounded-[6px] p-2.5 cursor-pointer"
+                      onClick={() => {
+                        setEditingRow(rowData);
+                        setOriginalRow(rowData);
+                        setVisible(true);
+                      }}
+                    >
+                      <i class="bi bi-pencil leading-none"></i>
+                    </button>
+                    <button
+                      className=" !bg-red-500 !text-white flex items-center justify-center rounded-[6px] p-2.5 cursor-pointer"
+                      onClick={() => confirmDelete(rowData)}
+                    >
+                      <i class="bi bi-trash leading-none"></i>
+                    </button>
+                  </div>
+                )}
+                alignHeader={"center"}
+                style={{
+                  width: "10%",
+                  textAlign: "center",
+                }}
+              />
+              <Column
+                field="membershipId"
+                header="Membership Id"
+                headerClassName="font-[poppins]"
+                sortable
+                alignHeader={"center"}
+                style={{
+                  textAlign: "center",
+                }}
+              />
+              <Column
+                header="Profile"
+                headerClassName=""
+                // body={(rowData) => (
+                //   <img
+                //     src={resolveImageSrc(rowData.profile)}
+                //     alt="item"
+                //     className="mx-auto w-10 h-10 object-cover rounded-[6px]"
+                //   />
+                // )}
+                bodyClassName="text-center"
+                alignHeader={"center"}
+                style={{
+                  // width: "10%",
+                  textAlign: "center",
+                }}
+              />
+              <Column
+                field="name"
+                header="Name"
+                headerClassName="font-[poppins]"
+                sortable
+                alignHeader={"center"}
+                style={{
+                  // width: "15%",
+                  textAlign: "center",
+                }}
+              />
+              <Column
+                field="mobileNumber"
+                header="Contact Number"
+                headerClassName="font-[poppins]"
+                alignHeader={"center"}
+                style={{
+                  // width: "15%",
+                  textAlign: "center",
+                }}
+              />
+              <Column
+                field="address"
+                header="Address"
+                headerClassName="font-[poppins]"
+                alignHeader={"center"}
+                style={{
+                  width: "10%",
+                  textAlign: "center",
+                }}
+              />
+              <Column
+                header="Status"
+                headerClassName="font-[poppins]"
+                body={(rowData) => {
+                  return (
+                    <div
+                      className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                        rowData.status == 1
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {rowData.status == 1 ? "ACTIVE" : "EXPIRED"}
+                    </div>
+                  );
+                }}
+                alignHeader={"center"}
+                style={{
+                  // width: "15%",
+                  textAlign: "center",
+                }}
+              />
+            </DataTable>{" "}
+          </>
+        )}
       </div>
 
       {/* Edit/Add Modal */}
       <Dialog
-        header={editingRow?._isNew ? "Add Inventory" : "Edit Inventory"}
+        header={editingRow?._isNew ? "Add Membership" : "Edit Inventory"}
         headerClassName="!font-[poppins]"
         visible={visible}
         draggable={false}
@@ -492,50 +453,51 @@ export default function Membership() {
         {editingRow && (
           <div className="flex flex-col gap-3">
             <div>
-              <label className="block text-sm font-medium mb-1">
-                Product Name
-              </label>
+              <label className="block text-sm font-medium mb-1">Name*</label>
               <InputText
                 value={editingRow.name}
                 onChange={(e) =>
                   setEditingRow({ ...editingRow, name: e.target.value })
                 }
-                placeholder="Type inventory name..."
+                placeholder="Enter name..."
                 className="w-full placeholder:text-sm !p-1.5 !font-[poppins] !px-3"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">
-                Product Category
+              <label className="block text-sm font-medium mb-1">Address</label>
+              <InputText
+                value={editingRow.address}
+                placeholder="Enter address..."
+                onChange={(e) =>
+                  setEditingRow({ ...editingRow, address: e.target.value })
+                }
+                className="w-full placeholder:text-sm !p-1.5 !font-[poppins] !px-3"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1 !font-[poppins]">
+                Contact Number*
               </label>
               <InputText
-                value={editingRow.category}
-                placeholder="Type category name..."
-                onChange={(e) =>
-                  setEditingRow({ ...editingRow, category: e.target.value })
-                }
+                value={editingRow.mobileNumber}
+                placeholder="Type lender mobile number..."
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={10}
+                onChange={(e) => {
+                  // Strip everything that is not a digit
+                  const val = e.target.value.replace(/\D/g, "");
+                  setEditingRow({
+                    ...editingRow,
+                    mobileNumber: val,
+                  });
+                }}
                 className="w-full placeholder:text-sm !p-1.5 !font-[poppins] !px-3"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Total Count
-              </label>
-              <InputNumber
-                value={editingRow.count}
-                onValueChange={(e) =>
-                  setEditingRow({ ...editingRow, count: e.value ?? 0 })
-                }
-                className="w-full placeholder:text-sm !p-1.5 !font-[poppins] !px-3"
-                min={0}
-                showButtons
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">
-                Product Image
-              </label>
+              <label className="block text-sm font-medium mb-1">Profile</label>
               <input
                 type="file"
                 accept="image/*"
@@ -545,18 +507,21 @@ export default function Membership() {
                   if (file) {
                     const reader = new FileReader();
                     reader.onload = (ev) =>
-                      setEditingRow({ ...editingRow, image: ev.target.result });
+                      setEditingRow({
+                        ...editingRow,
+                        profile: ev.target.result,
+                      });
                     reader.readAsDataURL(file);
                   }
                 }}
               />
-              {editingRow.image && (
+              {/* {editingRow.image && (
                 <img
                   src={resolveImageSrc(editingRow.image)}
                   alt="preview"
                   className="w-20 h-20 mt-2 object-cover rounded"
                 />
-              )}
+              )} */}
             </div>
           </div>
         )}

@@ -8,8 +8,6 @@ export const CREATE_CATEGORY = gql`
         id
         image
         name
-        total
-        available
       }
     }
   }
@@ -194,6 +192,64 @@ export const DELETE_INVENTORY_LENDING = gql`
 `;
 
 //---------------------------------------------------------------------------------------------------------------------------------------------
+
+export const ADD_MEMBERSHIP = gql`
+  mutation AddMembership(
+    $name: String!
+    $address: String!
+    $mobileNumber: String!
+    $profile: String
+  ) {
+    addMembership(
+      name: $name
+      address: $address
+      mobileNumber: $mobileNumber
+      profile: $profile
+    ) {
+      memberships {
+        name
+        address
+        mobileNumber
+        membershipId
+      }
+    }
+  }
+`;
+
+export const UPDATE_MEMBERSHIP = gql`
+  mutation UpdateMembership(
+    $id: ID!
+    $name: String
+    $address: String
+    $mobileNumber: String
+    $profile: String
+  ) {
+    updateMembership(
+      id: $id
+      name: $name
+      address: $address
+      mobileNumber: $mobileNumber
+      profile: $profile
+    ) {
+      memberships {
+        id
+        name
+        address
+        mobileNumber
+        profile
+      }
+    }
+  }
+`;
+
+export const DELETE_MEMBERSHIP = gql`
+  mutation DeleteMembership($id: ID!) {
+    deleteMembership(id: $id) {
+      ok
+    }
+  }
+`;
+
 //---------------------------------------------------------------------------------------------------------------------------------------------
 
 export const CREATE_BOOK = gql`
@@ -214,6 +270,35 @@ export const CREATE_BOOK = gql`
         name
         category
         author
+        total
+        available
+      }
+    }
+  }
+`;
+
+export const UPDATE_BOOK = gql`
+  mutation UpdateBook(
+    $id: ID!
+    $name: String
+    $category: String
+    $author: String
+    $total: Int
+  ) {
+    updateBook(
+      id: $id
+      name: $name
+      category: $category
+      author: $author
+      total: $total
+    ) {
+      book {
+        id
+        name
+        category
+        author
+        total
+        available
       }
     }
   }
@@ -222,7 +307,8 @@ export const CREATE_BOOK = gql`
 export const DELETE_BOOK = gql`
   mutation DeleteBook($id: ID!) {
     deleteBook(id: $id) {
-      success
+      ok
     }
   }
 `;
+//---------------------------------------------------------------------------------------------------------------------------------------------

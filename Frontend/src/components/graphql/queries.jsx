@@ -9,6 +9,21 @@ export const COUNT = gql`
   }
 `;
 
+export const GET_CATEGORIES = gql`
+  query GetCategories {
+    categories {
+      id
+      name
+      image
+      inventories {
+        id
+        name
+        status
+      }
+    }
+  }
+`;
+
 export const GET_INVENTORIES = gql`
   query GetInventories {
     inventories {
@@ -17,27 +32,8 @@ export const GET_INVENTORIES = gql`
       category {
         id
         name
-        total
-        available
       }
       status
-    }
-  }
-`;
-
-export const GET_CATEGORIES = gql`
-  query GetCategories {
-    categories {
-      id
-      name
-      image
-      total
-      available
-      inventories {
-        id
-        name
-        status
-      }
     }
   }
 `;
@@ -60,6 +56,20 @@ export const GET_INVENTORY_LENDING = gql`
       lendedDate
       returnDate
       remarks
+      status
+    }
+  }
+`;
+
+export const GET_MEMEBRSHIPS = gql`
+  query GetMemberships {
+    memberships {
+      id
+      name
+      address
+      membershipId
+      profile
+      mobileNumber
       status
     }
   }
