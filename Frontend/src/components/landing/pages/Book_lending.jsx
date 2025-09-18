@@ -12,7 +12,8 @@ import { FilterMatchMode } from "primereact/api";
 import { Calendar } from "primereact/calendar";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-
+import { useQuery, useMutation } from "@apollo/client/react";
+import { GET_BOOK_LENDING } from "../../graphql/queries";
 const ProductService = {
   getProductsMini() {
     return Promise.resolve([
@@ -57,6 +58,12 @@ const ProductService = {
 };
 
 export default function BookLending() {
+  //queries
+
+  const { data, loading, error } = useQuery(GET_BOOK_LENDING);
+  {
+    loading ? "" : console.log(data);
+  }
   const [products, setProducts] = useState([]);
   const [filters, setFilters] = useState({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
@@ -65,14 +72,6 @@ export default function BookLending() {
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [first, setFirst] = useState(0);
   const [rows, setRows] = useState(8);
-
-  const data = [
-    "Vaikom Muhammad Basheer",
-    "Hobbit",
-    "Hamlet",
-    "Hunger Games",
-    "Head First Java",
-  ];
 
   // Modal states
   const [visible, setVisible] = useState(false);

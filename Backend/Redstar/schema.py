@@ -20,12 +20,11 @@ def MembershipIdGenerator(last_id=None):
             new_serial= int(last_serial) + 1
         else:
             new_serial = 1 
-            
+
     else:
         new_serial = 1
     
     serial_str = str(new_serial).zfill(4)
-    print(f"{prefix}{date_code}-{serial_str}")
     return f"{prefix}{date_code}-{serial_str}"
 class InventoryType(DjangoObjectType):
     class Meta:
@@ -49,15 +48,23 @@ class InventoryLendingType(DjangoObjectType):
         model = InventoryLending
         fields = ("id", "name", "mobileNumber", "inventory", "address", "lendedDate", "returnDate", "remarks", "status")
 
-class BookType(DjangoObjectType):
-    class Meta:
-        model = Books
-        fields = ("id", "name", "author", "category", "total", "available")
 
 class MembershipsType(DjangoObjectType):
     class Meta:
         model = Memberships
         fields = ("id", "membershipId", "name", "profile", "mobileNumber",  "address",  "status")
+
+
+class BookType(DjangoObjectType):
+    class Meta:
+        model = Books
+        fields = ("id", "name", "author", "category", "total", "available")
+    
+class BookLendingType(DjangoObjectType):
+    class Meta:
+        model = BooksLending
+        fields = ("id", "member", "book", "lendedDate", "returnDate", "remarks", "status")
+
 
 class CountsType(graphene.ObjectType):
     inventories = graphene.Int()
@@ -70,6 +77,7 @@ class Query(graphene.ObjectType):
     inventory_lending = graphene.List(InventoryLendingType)
     counts = graphene.Field(CountsType)
     memberships = graphene.List(MembershipsType)
+    book_lending = graphene.List(BookLendingType)
 
     def resolve_categories(root, info):
         return Category.objects.all()
@@ -79,12 +87,15 @@ class Query(graphene.ObjectType):
 
     def resolve_inventory_lending(root, info):
         return InventoryLending.objects.all()
-    
+
+    def resolve_memberships(root, info):
+        return Memberships.objects.all()
+       
     def resolve_books(root, info):
         return Books.objects.all()
     
-    def resolve_memberships(root, info):
-        return Memberships.objects.all()
+    def resolve_book_lending(root, info):
+        return BooksLending.objects.all()
     
     def resolve_counts(root, info):
         return {
@@ -175,7 +186,6 @@ class UpdateCategory(graphene.Mutation):
     category = graphene.Field(CategoryType)
 
     def mutate(root, info, id, name=None):
-        print(id,name)
         category = Category.objects.get(pk=int(id))
         if name is not None:
             category.name=name
@@ -210,7 +220,6 @@ class AddInventoryLending(graphene.Mutation):
     inventory_lending = graphene.Field(InventoryLendingType)
     
     def mutate(self, info, name, inventory, mobileNumber, address, lendedDate, remarks):
-        print("safe")
         if Inventory.objects.get(pk=inventory).status ==  False :
             raise Exception("Lending record not found")
         else:
@@ -243,7 +252,6 @@ class UpdateInventoryLending(graphene.Mutation):
     inventory_lending = graphene.Field(InventoryLendingType)
 
     def mutate(self, info, id, **kwargs):
-        print("ok")
         try:
             lending = InventoryLending.objects.get(pk=id)
         except InventoryLending.DoesNotExist:
@@ -277,7 +285,6 @@ class ReturnInventoryLending(graphene.Mutation):
     inventory_lending = graphene.Field(InventoryLendingType)
 
     def mutate(self, info, id, returnDate, remarks=None  ):
-        print(returnDate)
         try:
             lending = InventoryLending.objects.get(pk=id)
         except InventoryLending.DoesNotExist:
@@ -324,8 +331,11 @@ class AddMembership(graphene.Mutation):
 
         last_obj = Memberships.objects.order_by("-membershipId").first()
         if last_obj:
-            MembershipIdGenerator(last_obj.membershipId)
-        memberships = Memberships.objects.create(name=name, address=address, mobileNumber=mobileNumber, status=True)
+            membershipId=MembershipIdGenerator(last_obj.membershipId)
+        else:
+            membershipId=MembershipIdGenerator()
+
+        memberships = Memberships.objects.create(name=name, address=address, mobileNumber=mobileNumber, membershipId=membershipId, status=True)
         return AddMembership(memberships=memberships)
     
 
@@ -357,6 +367,7 @@ class DeleteMembership(graphene.Mutation):
     ok = graphene.Boolean()
 
     def mutate(self, info, id):
+        
         try:
             membership = Memberships.objects.get(pk=id)
             membership.delete()
@@ -415,6 +426,19 @@ class DeleteBook(graphene.Mutation):
             return DeleteBook(ok=False)
 
 
+class CreateBookLending(graphene.Mutation):
+    class Arguments:
+        member = graphene.ID(required = True)
+        book = graphene.ID(required = True)
+        lendedDate = graphene.Date(required = True)
+        remarks = graphene.String()
+
+    book_lending = graphene.Field(BookType)
+
+    def mutate(root, info, member, book, lendedDate, remarks ):
+        book_lending = BooksLending.objects.create(member=member, book=book, lendedDate=lendedDate remarks=remarks, status=False )
+        return CreateBookLending(book_lending=book_lending)
+
 
 class Mutation(graphene.ObjectType):
 
@@ -438,6 +462,8 @@ class Mutation(graphene.ObjectType):
     create_book = CreateBook.Field()
     delete_book = DeleteBook.Field()
     update_book = UpdateBook.Field()
+
+    # create_book_lending = 
     
 
 

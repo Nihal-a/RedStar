@@ -87,3 +87,16 @@ export const GET_BOOKS = gql`
     }
   }
 `;
+export const GET_BOOK_LENDING = gql`
+  query GetBookLending {
+    bookLending {
+      id
+      member
+      book
+      lendedDate
+      returnDate
+      remarks
+      status
+    }
+  }
+`;

@@ -16,40 +16,6 @@ import {
   DELETE_MEMBERSHIP,
   UPDATE_MEMBERSHIP,
 } from "../../graphql/mutations";
-// Dummy ProductService
-const ProductService = {
-  getProductsMini() {
-    return Promise.resolve([
-      {
-        id: 1,
-        profile: "black-watch.jpg",
-        name: "Nihal",
-        mobilenumber: 9846080265,
-        address: "Areekkadan",
-        status: "Active",
-        membershipid: "BML0925-113",
-      },
-      {
-        id: 2,
-        profile: "black-watch.jpg",
-        name: "Bishir",
-        mobilenumber: 9765434561,
-        address: "Areekkadan",
-        status: "Inactive",
-        membershipid: "BML0925-43",
-      },
-      {
-        id: 3,
-        profile: "black-watch.jpg",
-        name: "Sreejith",
-        mobilenumber: 6587390210,
-        address: "Pennillathavan",
-        status: "Active",
-        membershipid: "BML0925-23",
-      },
-    ]);
-  },
-};
 
 export default function Membership() {
   //queries
@@ -61,12 +27,10 @@ export default function Membership() {
   const [DeleteMembership] = useMutation(DELETE_MEMBERSHIP);
 
   //
-  const [products, setProducts] = useState([]);
   const [filters, setFilters] = useState({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
   });
   const [globalFilterValue, setGlobalFilterValue] = useState("");
-  const [selectedProducts, setSelectedProducts] = useState([]);
   const [first, setFirst] = useState(0);
   const [rows, setRows] = useState(5);
 
@@ -76,14 +40,7 @@ export default function Membership() {
   const [originalRow, setOriginalRow] = useState(null);
   const toast = useRef(null);
 
-  useEffect(() => {
-    ProductService.getProductsMini().then((data) => {
-      const normalized = data.map((p, idx) => ({ ...p, id: p.id ?? idx + 1 }));
-      setProducts(normalized);
-    });
-  }, []);
-
-  /* ---------- CRUD ---------- */
+  //Add/edit Membership
   const addRow = () => {
     setEditingRow({
       id: Date.now(),
@@ -98,45 +55,7 @@ export default function Membership() {
     setVisible(true);
   };
 
-  const confirmDelete = (rowData) => {
-    confirmDialog({
-      message: `Delete ${rowData.name || "this person's"}'s Membership ?`,
-      header: "Delete Confirmation",
-      headerClassName: "pr-8",
-      // icon: "pi pi-trash text-red-600 text-[10px]",
-      icon: (
-        <i className="pi pi-trash text-red-600" style={{ fontSize: "18px" }} />
-      ),
-      acceptLabel: "Delete",
-      acceptClassName: "m-0",
-      rejectLabel: "Cancel",
-      draggable: false,
-      accept: async () => {
-        try {
-          await DeleteMembership({
-            variables: { id: rowData.id },
-            refetchQueries: [{ query: GET_MEMEBRSHIPS }],
-            awaitRefetchQueries: true,
-          });
-
-          toast.current?.show({
-            severity: "success",
-            summary: "Deleted",
-            detail: "Membership removed",
-          });
-        } catch (err) {
-          toast.current?.show({
-            severity: "error",
-            summary: "Error",
-            detail: err.message || "Error at membership deletion.",
-          });
-        }
-      },
-    });
-  };
-
   const saveRow = async () => {
-    console.log(editingRow);
     if (
       !editingRow.name?.trim() ||
       !editingRow.address?.trim() ||
@@ -180,13 +99,14 @@ export default function Membership() {
         });
       } else {
         const updates = {};
+
         if (editingRow.name !== originalRow.name)
           updates.name = editingRow.name;
         if (editingRow.mobileNumber !== originalRow.mobileNumber)
           updates.mobileNumber = editingRow.mobileNumber;
         if (editingRow.address !== originalRow.address)
           updates.address = editingRow.address;
-        console.log(updates);
+
         await updateMembership({
           variables: {
             id: editingRow.id,
@@ -195,6 +115,7 @@ export default function Membership() {
           refetchQueries: [{ query: GET_MEMEBRSHIPS }],
           awaitRefetchQueries: true,
         });
+
         setVisible(false);
         toast.current?.show({
           severity: "success",
@@ -209,6 +130,44 @@ export default function Membership() {
         detail: err.message,
       });
     }
+  };
+
+  //Membership deletion
+  const confirmDelete = (rowData) => {
+    confirmDialog({
+      message: `Delete ${rowData.name || "this person's"}'s Membership ?`,
+      header: "Delete Confirmation",
+      headerClassName: "pr-8",
+      // icon: "pi pi-trash text-red-600 text-[10px]",
+      icon: (
+        <i className="pi pi-trash text-red-600" style={{ fontSize: "18px" }} />
+      ),
+      acceptLabel: "Delete",
+      acceptClassName: "m-0",
+      rejectLabel: "Cancel",
+      draggable: false,
+      accept: async () => {
+        try {
+          await DeleteMembership({
+            variables: { id: rowData.id },
+            refetchQueries: [{ query: GET_MEMEBRSHIPS }],
+            awaitRefetchQueries: true,
+          });
+
+          toast.current?.show({
+            severity: "success",
+            summary: "Deleted",
+            detail: "Membership removed",
+          });
+        } catch (err) {
+          toast.current?.show({
+            severity: "error",
+            summary: "Error",
+            detail: err.message || "Error at membership deletion.",
+          });
+        }
+      },
+    });
   };
 
   const onGlobalFilterChange = (e) => {
@@ -289,8 +248,7 @@ export default function Membership() {
               rowsPerPageOptions={[5, 10, 20, 50]}
               rows={rows}
               first={first}
-              removableSort
-              onSelectionChange={(e) => setSelectedProducts(e.value)} // <-- update state
+              removableSort // <-- update state
               size="small"
               stripedRows
               onPage={onPage} //for when adding new coloumn new added will be listed at last

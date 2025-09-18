@@ -60,6 +60,15 @@ class InventoryLending(models.Model):
     remarks = models.CharField(max_length=200, null=True, blank=True)
     status = models.BooleanField(default=False)
 
+class Memberships(models.Model):
+    membershipId = models.CharField(max_length=120,blank=True,null=True) 
+    name = models.CharField(max_length=100, null=False, blank=False)
+    profile = models.TextField(blank=True, null=True)
+    address = models.CharField(max_length=200, null=False, blank=False)
+    mobileNumber = models.CharField(max_length=15, null=False, blank=False)
+    status = models.BooleanField()
+
+
 class Books(models.Model):
     name = models.CharField(max_length=200, null=False, blank=False)
     author = models.CharField(max_length=100, null=True, blank=True)
@@ -69,20 +78,10 @@ class Books(models.Model):
 
 
 class BooksLending(models.Model):
-    name = models.CharField(max_length=100, null=False, blank=False)
-    mobile_number = models.IntegerField( null=False, blank=False )
+    member = models.ForeignKey(Memberships, on_delete=models.CASCADE,blank=True,null=True)
     book = models.ForeignKey(Books, on_delete=models.CASCADE)
-    address = models.CharField(max_length=200, null=False, blank=False)
-    lended_date = models.DateField(null=False, blank=False)
-    deadline = models.DateField(null=True, blank=True)
-    return_date = models.DateField(null=True, blank=True)
+    lendedDate = models.DateField(null=False, blank=False)
+    returnDate = models.DateField(null=True, blank=True)
     remarks = models.CharField(max_length=200, null=True, blank=True)
     status = models.BooleanField(default=False)
 
-class Memberships(models.Model):
-    membershipId = models.TextField(max_length=20, null=False, blank=False, unique=True)
-    name = models.CharField(max_length=100, null=False, blank=False)
-    profile = models.TextField(blank=True, null=True)
-    address = models.CharField(max_length=200, null=False, blank=False)
-    mobileNumber = models.CharField(max_length=15, null=False, blank=False)
-    status = models.BooleanField()
