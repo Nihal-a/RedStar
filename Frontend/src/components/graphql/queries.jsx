@@ -91,8 +91,15 @@ export const GET_BOOK_LENDING = gql`
   query GetBookLending {
     bookLending {
       id
-      member
-      book
+      member {
+        id
+        name
+        membershipId
+      }
+      book {
+        id
+        name
+      }
       lendedDate
       returnDate
       remarks

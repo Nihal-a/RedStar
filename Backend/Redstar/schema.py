@@ -426,19 +426,92 @@ class DeleteBook(graphene.Mutation):
             return DeleteBook(ok=False)
 
 
+
 class CreateBookLending(graphene.Mutation):
     class Arguments:
-        member = graphene.ID(required = True)
-        book = graphene.ID(required = True)
-        lendedDate = graphene.Date(required = True)
+        member = graphene.ID(required=True)
+        book = graphene.ID(required=True)
+        lendedDate = graphene.Date(required=True)
         remarks = graphene.String()
 
-    book_lending = graphene.Field(BookType)
+    book_lending = graphene.Field(BookLendingType)
 
-    def mutate(root, info, member, book, lendedDate, remarks ):
-        book_lending = BooksLending.objects.create(member=member, book=book, lendedDate=lendedDate remarks=remarks, status=False )
+    def mutate(root, info, member, book, lendedDate, remarks=None):
+        try:
+            member_obj = Memberships.objects.get(pk=member)
+        except Memberships.DoesNotExist:
+            raise GraphQLError("Member not found")
+
+        try:
+            book_obj = Books.objects.get(pk=book)
+        except Books.DoesNotExist:
+            raise GraphQLError("Book not found")
+
+        book_lending = BooksLending.objects.create(
+            member=member_obj,
+            book=book_obj,
+            lendedDate=lendedDate,
+            remarks=remarks,
+            status=False
+        )
+
         return CreateBookLending(book_lending=book_lending)
 
+
+class UpdateBookLending(graphene.Mutation):
+    
+    class Arguments:
+        id = graphene.ID(required=True)
+        member = graphene.ID()
+        book = graphene.ID()
+        returnDate = graphene.Date()
+        lendedDate  = graphene.Date()
+        remarks = graphene.String()
+
+    book_lending = graphene.Field(BookLendingType)
+
+    def mutate(self, info, id, **kwargs):
+        try:
+            lending = BooksLending.objects.get(pk=id)
+        except BooksLending.DoesNotExist:
+            raise Exception("Lending record not found")
+
+        for field, value in kwargs.items():
+            print("ok")
+            if value is not None:
+                if field == "book":
+                    old_book = lending.book
+                    if old_book:
+                        old_book.available += 1
+                        old_book.save()
+                    
+
+                    new_book = Books.objects.get(pk=int(value))
+                    new_book.available -= 1
+                    new_book.save()
+
+                    setattr(lending, field, new_book)
+                else:
+                    setattr(lending, field, value)
+
+        lending.save()
+        return UpdateBookLending(book_lending=lending)
+    
+class DeleteBookLending(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+
+    ok = graphene.Boolean()
+
+    def mutate(self, info, id):
+        try:
+            lending = BooksLending.objects.get(pk=id)
+            if lending.status == 0:  
+                raise Exception("Lending Book not returned yet.")
+            lending.delete()
+            return DeleteBookLending(ok=True)
+        except BooksLending.DoesNotExist:
+            raise Exception("Lending record not found.")
 
 class Mutation(graphene.ObjectType):
 
@@ -463,8 +536,9 @@ class Mutation(graphene.ObjectType):
     delete_book = DeleteBook.Field()
     update_book = UpdateBook.Field()
 
-    # create_book_lending = 
-    
+    create_book_lending =  CreateBookLending.Field()
+    delete_book_lending = DeleteBookLending.Field()
+    update_book_lending = UpdateBookLending.Field()
 
 
 schema = graphene.Schema(query=Query, mutation=Mutation)

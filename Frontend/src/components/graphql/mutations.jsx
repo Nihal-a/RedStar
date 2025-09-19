@@ -312,3 +312,112 @@ export const DELETE_BOOK = gql`
   }
 `;
 //---------------------------------------------------------------------------------------------------------------------------------------------
+export const ADD_BOOK_LENDING = gql`
+  mutation createBookLending(
+    $member: ID!
+    $book: ID!
+    $lendedDate: Date!
+    $remarks: String
+  ) {
+    createBookLending(
+      member: $member
+      book: $book
+      lendedDate: $lendedDate
+      remarks: $remarks
+    ) {
+      bookLending {
+        id
+        member {
+          id
+          name
+        }
+        book {
+          id
+          name
+        }
+        lendedDate
+        returnDate
+        remarks
+        status
+      }
+    }
+  }
+`;
+
+export const UPDATE_BOOK_LENDING = gql`
+  mutation updateBookLending(
+    $id: ID!
+    $member: ID
+    $book: ID
+    $lendedDate: Date
+    $returnDate: Date
+    $remarks: String
+  ) {
+    updateBookLending(
+      id: $id
+      member: $member
+      book: $book
+      lendedDate: $lendedDate
+      returnDate: $returnDate
+      remarks: $remarks
+    ) {
+      bookLending {
+        id
+        member {
+          id
+          name
+        }
+        book {
+          id
+          name
+        }
+        lendedDate
+        returnDate
+        remarks
+        status
+      }
+    }
+  }
+`;
+
+export const DELETE_BOOK_LENDING = gql`
+  mutation deleteBookLending($id: ID!) {
+    deleteBookLending(id: $id) {
+      ok
+    }
+  }
+`;
+
+
+export const RETURN_BOOK_LENDING = gql`
+  mutation returnInventoryLending(
+    $id: ID!
+    $returnDate: Date!
+    $remarks: String
+  ) {
+    returnInventoryLending(
+      id: $id
+      returnDate: $returnDate
+      remarks: $remarks
+    ) {
+      inventoryLending {
+        id
+        name
+        mobileNumber
+        address
+        inventory {
+          id
+          name
+          category {
+            id
+            name
+          }
+        }
+        lendedDate
+        returnDate
+        remarks
+        status
+      }
+    }
+  }
+`;

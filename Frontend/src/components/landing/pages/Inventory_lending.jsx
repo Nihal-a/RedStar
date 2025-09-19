@@ -128,6 +128,12 @@ export default function InventoryLending() {
           ],
           awaitRefetchQueries: true,
         });
+        setVisible(false);
+        toast.current?.show({
+          severity: "success",
+          summary: "Saved",
+          detail: "Inventory lending record added",
+        });
       } else {
         const newLendedDate = normalizeDate(editingRow.lendedDate);
         const oldLendedDate = normalizeDate(originalRow.lendedDate);

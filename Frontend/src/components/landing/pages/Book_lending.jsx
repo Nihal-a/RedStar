@@ -10,64 +10,46 @@ import { ConfirmDialog, confirmDialog } from "primereact/confirmdialog";
 import { Dialog } from "primereact/dialog";
 import { FilterMatchMode } from "primereact/api";
 import { Calendar } from "primereact/calendar";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import { Dropdown } from "primereact/dropdown";
 import { useQuery, useMutation } from "@apollo/client/react";
-import { GET_BOOK_LENDING } from "../../graphql/queries";
-const ProductService = {
-  getProductsMini() {
-    return Promise.resolve([
-      {
-        id: 1,
-        book: "Oxygen cylindar",
-        name: "Mohammed Nihal Areekkadan",
-        mobilenumber: "9846080265",
-        address: " Areekkadan(h), punnathala (p.o),",
-        lendeddate: "Wed Sep 21 2025 00:00:00 GMT+0530 (India Standard Time)",
-        returneddate: "-",
-        remarks: "-",
-        status: "Pending",
-        deadline: "Wed Sep 29 2025 00:00:00 GMT+0530 (India Standard Time)",
-      },
-      {
-        id: 2,
-        book: "Wheel Chair",
-        name: "Swalih",
-        mobilenumber: "8075244365",
-        address: "  kundan(h), punnathala (p.o)",
-        lendeddate: "Wed Sep 08 2025 00:00:00 GMT+0530 (India Standard Time)",
-        returneddate: "",
-        remarks: "-",
-        status: "Pending",
-        deadline: "Wed Sep 29 2025 00:00:00 GMT+0530 (India Standard Time)",
-      },
-      {
-        id: 3,
-        book: "Water Bed",
-        name: "Sinan",
-        mobilenumber: "6282856560",
-        address: " kundan(h), punnathala (p.o)",
-        lendeddate: "Wed Sep 03 2025 00:00:00 GMT+0530 (India Standard Time)",
-        returneddate: "Wed Sep 02 2025 00:00:00 GMT+0530 (India Standard Time)",
-        remarks: "Small leakage",
-        status: "Returned",
-        deadline: "Wed Sep 29 2025 00:00:00 GMT+0530 (India Standard Time)",
-      },
-    ]);
-  },
-};
+import {
+  GET_BOOK_LENDING,
+  GET_BOOKS,
+  GET_MEMEBRSHIPS,
+} from "../../graphql/queries";
+import { format, addMonths } from "date-fns";
+import {
+  ADD_BOOK_LENDING,
+  DELETE_BOOK_LENDING,
+  UPDATE_BOOK_LENDING,
+} from "../../graphql/mutations";
 
 export default function BookLending() {
   //queries
+  const { data, loading, error, refetch } = useQuery(GET_BOOK_LENDING);
+  const {
+    data: bookData,
+    loading: bookLoading,
+    error: bookError,
+    refetch: bookRefetch,
+  } = useQuery(GET_BOOKS);
 
-  const { data, loading, error } = useQuery(GET_BOOK_LENDING);
-  {
-    loading ? "" : console.log(data);
-  }
-  const [products, setProducts] = useState([]);
+  const {
+    data: memberData,
+    loading: memberLoading,
+    error: memberError,
+    refetch: memberRefetch,
+  } = useQuery(GET_MEMEBRSHIPS);
+
+  //mutations
+
+  const [addBookLending] = useMutation(ADD_BOOK_LENDING);
+  const [deleteBookLending] = useMutation(DELETE_BOOK_LENDING);
+  const [updateBookLending] = useMutation(UPDATE_BOOK_LENDING);
+
   const [filters, setFilters] = useState({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    lendeddate: { value: null, matchMode: FilterMatchMode.DATE_IS },
+    lendedDate: { value: null, matchMode: FilterMatchMode.DATE_IS },
   });
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [first, setFirst] = useState(0);
@@ -76,6 +58,7 @@ export default function BookLending() {
   // Modal states
   const [visible, setVisible] = useState(false);
   const [editingRow, setEditingRow] = useState(null);
+  const [originalRow, setOriginalRow] = useState(null);
   const [authorSuggestions, setAuthorSuggestions] = useState([]);
 
   const [confirmVisible, setconfirmVisible] = useState(false);
@@ -85,131 +68,27 @@ export default function BookLending() {
 
   const toast = useRef(null);
 
-  useEffect(() => {
-    ProductService.getProductsMini().then((data) => {
-      const normalized = data.map((p, idx) => ({
-        ...p,
-        id: p.id ?? idx + 1,
-        lendeddate:
-          p.lendeddate && p.lendeddate !== "-" ? new Date(p.lendeddate) : null,
-        returneddate:
-          p.returneddate && p.returneddate !== "-"
-            ? new Date(p.returneddate)
-            : null,
-        deadline:
-          p.deadline && p.deadline !== "-"
-            ? new Date(
-                new Date(p.deadline).setMonth(
-                  new Date(p.deadline).getMonth() + 1
-                )
-              )
-            : null,
-      }));
-      setProducts(normalized);
-    });
-  }, []);
-
-  /* ---------- PDF export ---------- */
-  const exportPDF = () => {
-    const doc = new jsPDF("p", "pt");
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(18);
-    doc.setTextColor(0, 0, 128);
-    doc.text(
-      "Inventory lending Report",
-      doc.internal.pageSize.getWidth() / 2,
-      40,
-      {
-        align: "center",
-      }
-    );
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    doc.setTextColor(0, 0, 0);
-    doc.text("Generated on: 04 Sep 2025", 40, 70);
-
-    const headers = [
-      ["S.No", "Name", "book", "Address", "Date", "Remarks", "Status"],
-    ];
-    const data = products.map((p, index) => [
-      index + 1,
-      p.name || "—",
-      p.book || "—",
-      p.address ?? "_",
-      p.date ?? "_",
-      p.remarks ?? "_",
-      p.deadline ?? "-",
-      p.status ?? "_",
-    ]);
-
-    autoTable(doc, {
-      head: headers,
-      headStyles: {
-        fillColor: [224, 21, 20],
-        textColor: 255,
-        fontStyle: "bold",
-        halign: "center",
-      },
-      body: data,
-      startY: 50,
-      margin: { left: 32 },
-      theme: "grid",
-      styles: {
-        fontSize: 10,
-        cellWidth: "wrap",
-        overflow: "linebreak",
-      },
-      columnStyles: {
-        1: { cellWidth: 80 },
-        2: { cellWidth: 100 },
-        3: { cellWidth: 130 },
-        5: { cellWidth: 80 },
-      },
-    });
-
-    doc.save("inventorylending.pdf");
-  };
-
   /* ---------- CRUD ---------- */
+  function normalizeDate(val) {
+    if (!val) return null;
+    const dateObj = typeof val === "string" ? new Date(val) : val;
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+    const day = String(dateObj.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`; // stays in local date
+  }
+
   const addRow = () => {
     setEditingRow({
       id: Date.now(),
       book: "",
-      name: "",
-      mobilenumber: "",
-      address: "",
-      lendeddate: null,
-      returneddate: null,
+      member: "",
+      lendedDate: null,
       remarks: "",
-      status: "Pending",
+      status: "",
       _isNew: true,
     });
     setVisible(true);
-  };
-
-  const confirmDelete = (rowData) => {
-    confirmDialog({
-      message: `Delete "${rowData.name || "this item"}"?`,
-      header: "Delete Confirmation",
-      headerClassName: "pr-8",
-      // icon: "pi pi-trash text-red-600 text-[10px]",
-      icon: (
-        <i className="pi pi-trash text-red-600" style={{ fontSize: "18px" }} />
-      ),
-      acceptLabel: "Delete",
-      acceptClassName: "m-0",
-      rejectLabel: "Cancel",
-      draggable: false,
-      accept: () => {
-        setProducts((prev) => prev.filter((p) => p.id !== rowData.id));
-        toast.current?.show({
-          severity: "success",
-          summary: "Deleted",
-          detail: "Item removed",
-        });
-      },
-    });
   };
 
   const confirmReturn = (rowData) => {
@@ -218,14 +97,8 @@ export default function BookLending() {
     setconfirmVisible(true);
   };
 
-  const saveRow = () => {
-    if (
-      !editingRow.name?.trim() ||
-      !editingRow.book?.trim() ||
-      !editingRow.mobilenumber?.trim() ||
-      !editingRow.address?.trim() ||
-      !editingRow.lendeddate
-    ) {
+  const saveRow = async () => {
+    if (!editingRow.member || !editingRow.book || !editingRow.lendedDate) {
       toast.current?.show({
         severity: "warn",
         summary: "Validation",
@@ -234,54 +107,127 @@ export default function BookLending() {
       return;
     }
     if (!editingRow) return;
+    const normalizedLendedDate = normalizeDate(editingRow.lendedDate);
 
-    let updated;
-    if (editingRow._isNew) {
-      const newRow = { ...editingRow };
-      delete newRow._isNew;
-      updated = [newRow, ...products];
-    } else {
-      updated = products.map((p) => (p.id === editingRow.id ? editingRow : p));
+    try {
+      if (editingRow._isNew) {
+        // CREATE
+        console.log("okok");
+        console.log(editingRow);
+        console.log(normalizedLendedDate);
+        await addBookLending({
+          variables: {
+            member: parseInt(editingRow.member),
+            book: parseInt(editingRow.book),
+            lendedDate: normalizedLendedDate,
+            remarks: editingRow.remarks || null,
+          },
+          refetchQueries: [
+            { query: GET_BOOK_LENDING },
+            { query: GET_MEMEBRSHIPS },
+            { query: GET_BOOKS },
+          ],
+          awaitRefetchQueries: true,
+        });
+      } else {
+        const newLendedDate = normalizeDate(editingRow.lendedDate);
+        const oldLendedDate = normalizeDate(originalRow.lendedDate);
+
+        const newReturnDate = normalizeDate(editingRow.returnDate);
+        const oldReturnDate = normalizeDate(originalRow.returnDate);
+
+        const updates = {};
+
+        const newBookId = editingRow.book?.toString();
+        const oldBookId = originalRow.book?.toString();
+
+        const newMemberId = editingRow.member?.toString();
+        const oldMemberId = originalRow.member?.toString();
+
+        if (newBookId && newBookId !== oldBookId) {
+          updates.book = parseInt(newBookId, 10);
+        }
+        if (newMemberId && newMemberId !== oldMemberId) {
+          updates.member = parseInt(newMemberId, 10);
+        }
+
+        if (newLendedDate !== oldLendedDate) updates.lendedDate = newLendedDate;
+        if (newReturnDate !== oldReturnDate) updates.returnDate = newReturnDate;
+        if (editingRow.remarks !== originalRow.remarks) {
+          updates.remarks = editingRow.remarks;
+        }
+
+        if (Object.keys(updates).length > 0) {
+          await updateBookLending({
+            variables: {
+              id: editingRow.id,
+              ...updates,
+            },
+            refetchQueries: [{ query: GET_BOOK_LENDING }],
+            awaitRefetchQueries: true,
+          });
+        }
+      }
+      setVisible(false);
+      toast.current?.show({
+        severity: "success",
+        summary: "Saved",
+        detail: `${
+          editingRow._isNew
+            ? "Book record added successfully"
+            : "Changes saved successfully"
+        }`,
+      });
+    } catch (err) {
+      toast.current?.show({
+        severity: "error",
+        summary: "Error",
+        detail: err.message,
+      });
     }
+  };
 
-    setProducts(updated);
-    setVisible(false);
-    toast.current?.show({
-      severity: "success",
-      summary: "Saved",
-      detail: "Row saved",
+  const confirmDelete = (rowData) => {
+    confirmDialog({
+      message: `Delete record of "${rowData.name || "this person"}" lended "${
+        rowData.inventory?.category?.name || "item"
+      }"?`,
+      header: "Delete Confirmation",
+      headerClassName: "pr-8",
+      icon: (
+        <i className="pi pi-trash text-red-600" style={{ fontSize: "18px" }} />
+      ),
+      acceptLabel: "Delete",
+      acceptClassName: "m-0",
+      rejectLabel: "Cancel",
+      draggable: false,
+      accept: async () => {
+        try {
+          await deleteBookLending({
+            variables: { id: rowData.id },
+            refetchQueries: [
+              { query: GET_BOOK_LENDING },
+              { query: GET_MEMEBRSHIPS },
+              { query: GET_BOOKS },
+            ],
+            awaitRefetchQueries: true,
+          });
+
+          toast.current?.show({
+            severity: "success",
+            summary: "Deleted",
+            detail: "Record removed",
+          });
+        } catch (err) {
+          toast.current?.show({
+            severity: "error",
+            summary: "Error",
+            detail: err.message || "Lending Book not returned yet.",
+          });
+        }
+      },
     });
   };
-
-  const getStatus = (count) => {
-    if (count > 10) return "INSTOCK";
-    if (count > 0) return "LOWSTOCK";
-    return "OUTOFSTOCK";
-  };
-
-  const statusBody = (rowData) => {
-    const status = rowData.status;
-    const classes =
-      status === "Pending"
-        ? "bg-red-100 text-red-800"
-        : "bg-green-100 text-green-800";
-
-    return (
-      <span
-        className={`inline-block px-2 py-1 rounded text-xs font-medium ${classes}`}
-      >
-        {status}
-      </span>
-    );
-  };
-
-  const searchAuthor = (event) => {
-    let query = event.query.toLowerCase();
-    let filtered = data.filter((item) => item.toLowerCase().includes(query));
-    setAuthorSuggestions(filtered);
-  };
-
-  const serialBody = (rowData, options) => first + options.rowIndex + 1;
 
   const onGlobalFilterChange = (e) => {
     const value = e.target.value;
@@ -320,7 +266,7 @@ export default function BookLending() {
               Add Record
             </button>
             <button
-              onClick={exportPDF}
+              // onClick={exportPDF}
               className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center cursor-pointer"
             >
               <i class="bi bi-file-earmark-pdf pr-1 "></i>
@@ -331,200 +277,215 @@ export default function BookLending() {
       </div>
 
       <div className="bg-white rounded-lg shadow-md p-4 ">
-        <div className="w-full p-5 bg-[#F9FAFB] mb-3 rounded-sm border-1 border-[#e6e6e6] flex justify-between">
-          <div className="opacity-0 ">o</div>
-          <div className="relative ">
-            <input
-              value={globalFilterValue}
-              onChange={onGlobalFilterChange}
-              type="text"
-              placeholder="Search..."
-              className="w-full py-2 md:pl-8 pl-2 pr-3 text-sm rounded-md ring-1 ring-gray-300  focus:outline-none"
-            />
-            <i className="bi bi-search hidden md:block absolute left-[10px] top-[50%] translate-y-[-50%] text-[14px] text-black"></i>
-          </div>
-        </div>
-
-        <DataTable
-          value={products}
-          dataKey="id"
-          paginator
-          rows={10}
-          alwaysShowPaginator={true}
-          paginatorClassName="mt-3 "
-          removableSort
-          size="small"
-          stripedRows
-          first={first}
-          onPage={onPage} //for when adding new coloumn new added will be listed at last
-          rowsPerPageOptions={[5, 10, 20, 30]}
-          filters={filters}
-          globalFilterFields={[
-            "name",
-            "book",
-            "address",
-            "mobilenumber",
-            "lendeddate",
-          ]}
-          emptyMessage="No Books found."
-          tableStyle={{ minWidth: "70rem", tableLayout: "fixed" }}
-          className="min-h-full w-full h-[72vh] overflow-auto !text-[14px] !font-[poppins]"
-        >
-          <Column
-            header="S.No"
-            headerClassName="font-[poppins]"
-            body={serialBody}
-            alignHeader={"center"}
-            style={{
-              width: "5%",
-              textAlign: "center",
-            }}
-          />
-          <Column
-            header="Actions"
-            headerClassName="font-[poppins]"
-            body={(rowData) => (
-              <div className="w-full flex items-center justify-center gap-2">
-                <button
-                  className=" !bg-blue-500 !text-white flex items-center justify-center rounded-[6px] p-2.5 cursor-pointer"
-                  onClick={() => {
-                    setEditingRow(rowData);
-                    setVisible(true);
-                  }}
-                >
-                  <i class="bi bi-pencil leading-none"></i>
-                </button>
-                <button
-                  className=" !bg-red-500 !text-white flex items-center justify-center rounded-[6px] p-2.5 cursor-pointer"
-                  onClick={() => confirmDelete(rowData)}
-                >
-                  <i class="bi bi-trash leading-none"></i>
-                </button>
-                <button
-                  className=" !bg-green-500 !text-white flex items-center justify-center rounded-[6px] p-2.5 cursor-pointer"
-                  onClick={() => confirmReturn(rowData)}
-                >
-                  <i class="bi bi-check-lg leading-none"></i>
-                </button>
+        {loading || error ? (
+          loading ? (
+            <p>Loading records...</p>
+          ) : (
+            <p>Error: {error.message}</p>
+          )
+        ) : (
+          <>
+            <div className="w-full p-5 bg-[#F9FAFB] mb-3 rounded-sm border-1 border-[#e6e6e6] flex justify-between">
+              <div className="opacity-0 ">o</div>
+              <div className="relative ">
+                <input
+                  value={globalFilterValue}
+                  onChange={onGlobalFilterChange}
+                  type="text"
+                  placeholder="Search..."
+                  className="w-full py-2 md:pl-8 pl-2 pr-3 text-sm rounded-md ring-1 ring-gray-300  focus:outline-none"
+                />
+                <i className="bi bi-search hidden md:block absolute left-[10px] top-[50%] translate-y-[-50%] text-[14px] text-black"></i>
               </div>
-            )}
-            alignHeader={"center"}
-            style={{
-              width: "10%",
-              textAlign: "center",
-            }}
-          />
-          <Column
-            field="name"
-            header="Name"
-            headerClassName="font-[poppins]"
-            alignHeader={"center"}
-            style={{
-              textAlign: "center",
-            }}
-          />
-          <Column
-            field="mobilenumber"
-            header="Mobile Number"
-            headerClassName="font-[poppins]"
-            alignHeader={"center"}
-            style={{
-              textAlign: "center",
-            }}
-          />
-          <Column
-            field="book"
-            header="Book"
-            headerClassName="font-[poppins]"
-            alignHeader={"center"}
-            style={{
-              textAlign: "center",
-            }}
-          />
+            </div>
 
-          <Column
-            field="address"
-            header="Address"
-            headerClassName="font-[poppins]"
-            alignHeader={"center"}
-            style={{
-              textAlign: "center",
-            }}
-          />
-          <Column
-            field="lendeddate"
-            header="Lended Date"
-            headerClassName="font-[poppins]"
-            sortable
-            body={(row) =>
-              row.lendeddate ? row.lendeddate.toLocaleDateString("en-GB") : "-"
-            }
-            alignHeader={"center"}
-            style={{
-              width: "10%",
-              textAlign: "center",
-            }}
-          />
+            <DataTable
+              value={data.bookLending}
+              dataKey="id"
+              paginator
+              rows={10}
+              alwaysShowPaginator={true}
+              paginatorClassName="mt-3 "
+              removableSort
+              size="small"
+              stripedRows
+              first={first}
+              onPage={onPage} //for when adding new coloumn new added will be listed at last
+              rowsPerPageOptions={[5, 10, 20, 30]}
+              filters={filters}
+              globalFilterFields={[
+                "name",
+                "book",
+                "address",
+                "mobilenumber",
+                "lendedDate",
+              ]}
+              emptyMessage="No Records found."
+              tableStyle={{ minWidth: "70rem", tableLayout: "fixed" }}
+              className="min-h-full w-full h-[72vh] overflow-auto !text-[14px] !font-[poppins]"
+            >
+              <Column
+                header="S.No"
+                headerClassName="font-[poppins]"
+                body={(rowData, options) => first + options.rowIndex + 1}
+                alignHeader={"center"}
+                style={{
+                  width: "5%",
+                  textAlign: "center",
+                }}
+              />
+              <Column
+                header="Actions"
+                headerClassName="font-[poppins]"
+                body={(rowData) => (
+                  <div className="w-full flex items-center justify-center gap-2">
+                    <button
+                      className=" !bg-blue-500 !text-white flex items-center justify-center rounded-[6px] p-2.5 cursor-pointer"
+                      onClick={() => {
+                        setEditingRow(rowData);
+                        setOriginalRow({ ...rowData });
+                        setVisible(true);
+                      }}
+                    >
+                      <i class="bi bi-pencil leading-none"></i>
+                    </button>
+                    <button
+                      className=" !bg-red-500 !text-white flex items-center justify-center rounded-[6px] p-2.5 cursor-pointer"
+                      onClick={() => confirmDelete(rowData)}
+                    >
+                      <i class="bi bi-trash leading-none"></i>
+                    </button>
+                    <button
+                      className=" !bg-green-500 !text-white flex items-center justify-center rounded-[6px] p-2.5 cursor-pointer"
+                      onClick={() => confirmReturn(rowData)}
+                    >
+                      <i class="bi bi-check-lg leading-none"></i>
+                    </button>
+                  </div>
+                )}
+                alignHeader={"center"}
+                style={{
+                  width: "10%",
+                  textAlign: "center",
+                }}
+              />
+              <Column
+                field="member.name"
+                header="Lender"
+                headerClassName="font-[poppins]"
+                alignHeader={"center"}
+                style={{
+                  textAlign: "center",
+                }}
+              />
 
-          <Column
-            field="returneddate"
-            header="Return Date"
-            headerClassName="font-[poppins]"
-            alignHeader={"center"}
-            body={(row) =>
-              row.returneddate
-                ? row.returneddate.toLocaleDateString("en-GB")
-                : "-"
-            }
-            style={{
-              width: "10%",
-              textAlign: "center",
-            }}
-          />
-          <Column
-            field="deadline"
-            header="Deadline"
-            headerClassName="font-[poppins]"
-            alignHeader={"center"}
-            body={(row) =>
-              row.returneddate
-                ? row.returneddate.toLocaleDateString("en-GB")
-                : "-"
-            }
-            style={{
-              width: "10%",
-              textAlign: "center",
-            }}
-          />
-          <Column
-            field="remarks"
-            header="Remarks"
-            headerClassName="font-[poppins]"
-            alignHeader={"center"}
-            style={{
-              textAlign: "center",
-            }}
-          />
+              <Column
+                field="book.name"
+                header="Book"
+                headerClassName="font-[poppins]"
+                alignHeader={"center"}
+                style={{
+                  textAlign: "center",
+                }}
+              />
 
-          <Column
-            header="Status"
-            headerClassName="font-[poppins]"
-            body={statusBody}
-            alignHeader={"center"}
-            style={{
-              textAlign: "center",
-            }}
-          />
-        </DataTable>
+              <Column
+                field="lendedDate"
+                header="Lended Date"
+                headerClassName="font-[poppins]"
+                sortable
+                body={(rowData) =>
+                  format(new Date(rowData.lendedDate), "dd-MM-yy")
+                }
+                alignHeader={"center"}
+                style={{
+                  width: "10%",
+                  textAlign: "center",
+                }}
+                dateFormat="dd-mm-yy"
+              />
+              <Column
+                header="Deadline"
+                headerClassName="font-[poppins]"
+                alignHeader={"center"}
+                body={(rowData) => {
+                  if (!rowData.lendedDate) return "-";
+
+                  const newDate = addMonths(new Date(rowData.lendedDate), 1);
+
+                  return format(newDate, "dd-MM-yy");
+                }}
+                style={{
+                  width: "10%",
+                  textAlign: "center",
+                }}
+                dateFormat="dd-mm-yy"
+              />
+              <Column
+                field="returneddate"
+                header="Return Date"
+                headerClassName="font-[poppins]"
+                alignHeader={"center"}
+                body={(rowData) => {
+                  return rowData.returnDate ? (
+                    format(new Date(rowData.returnDate), "dd-MM-yy")
+                  ) : (
+                    <span className="text-gray-400">Not returned.</span>
+                  );
+                }}
+                style={{
+                  width: "10%",
+                  textAlign: "center",
+                }}
+                dateFormat="dd-mm-yy"
+              />
+
+              <Column
+                field="remarks"
+                header="Remarks"
+                body={(rowData) => {
+                  return rowData.remarks ? (
+                    <span>{rowData.remarks}</span>
+                  ) : (
+                    <span className="text-gray-400">No remarks.</span>
+                  );
+                }}
+                headerClassName="font-[poppins]"
+                alignHeader={"center"}
+                style={{
+                  textAlign: "center",
+                }}
+              />
+
+              <Column
+                header="Status"
+                headerClassName="font-[poppins]"
+                body={(rowData) => {
+                  return (
+                    <div
+                      className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                        rowData.status
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {rowData.status ? "RETURNED" : "PENDING"}
+                    </div>
+                  );
+                }}
+                alignHeader={"center"}
+                style={{
+                  textAlign: "center",
+                }}
+              />
+            </DataTable>
+          </>
+        )}
       </div>
 
       {/* Edit/Add Modal */}
       <Dialog
-        header={
-          editingRow?._isNew
-            ? "Add Inventory Lending"
-            : "Edit Inventory Lending"
-        }
+        header={editingRow?._isNew ? "Add Book Lending" : "Edit Book Lending"}
         headerClassName="!font-[poppins]"
         visible={visible}
         className="w-[90%] md:w-[40%] "
@@ -552,28 +513,30 @@ export default function BookLending() {
           <div className="flex flex-col gap-3">
             <div>
               <label className="block text-sm font-medium mb-1 !font-[poppins]">
-                Name*
+                Lender*
               </label>
-              <InputText
-                value={editingRow.name}
+              <Dropdown
+                value={
+                  editingRow?.member
+                    ? typeof editingRow.member === "object"
+                      ? editingRow.member?.id?.toString()
+                      : editingRow.member?.toString()
+                    : ""
+                }
+                options={[
+                  { label: "Select Member", value: "" },
+                  ...(memberData?.memberships?.map((mbr) => ({
+                    label: `${mbr.name} (${mbr.membershipId})`,
+                    value: mbr.id.toString(),
+                  })) || []),
+                ]}
                 placeholder="Type lender name..."
                 onChange={(e) =>
-                  setEditingRow({ ...editingRow, name: e.target.value })
+                  setEditingRow({ ...editingRow, member: e.value || "" })
                 }
-                className="w-full placeholder:text-sm !p-1.5 !font-[poppins] !px-3"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1 !font-[poppins]">
-                Mobile Number*
-              </label>
-              <InputText
-                value={editingRow.mobilenumber}
-                placeholder="Type lender mobile number..."
-                onChange={(e) =>
-                  setEditingRow({ ...editingRow, mobilenumber: e.target.value })
-                }
-                className="w-full placeholder:text-sm !p-1.5 !font-[poppins] !px-3"
+                // filter
+                // filterBy="label"
+                className="w-full placeholder:text-sm !font-[poppins] [&_.p-dropdown-label]:!p-1.5 "
               />
             </div>
 
@@ -581,66 +544,53 @@ export default function BookLending() {
               <label className="block text-sm font-medium mb-1 !font-[poppins]">
                 book Name*
               </label>
-              <AutoComplete
-                value={editingRow.book}
-                suggestions={authorSuggestions}
-                completeMethod={searchAuthor}
-                onChange={(e) =>
-                  setEditingRow({ ...editingRow, book: e.value })
+              <Dropdown
+                value={
+                  editingRow?.book
+                    ? typeof editingRow.book === "object"
+                      ? editingRow.book?.id?.toString?.() || ""
+                      : editingRow.book?.toString?.() || ""
+                    : ""
                 }
+                options={[
+                  { label: "Select Book", value: "" },
+                  ...(bookData?.books?.map((book) => ({
+                    label: book.name,
+                    value: book.id.toString(),
+                  })) || []),
+                ]}
+                onChange={(e) => {
+                  setEditingRow({ ...editingRow, book: e.value || "" });
+                }}
                 placeholder="Select book..."
-                className="w-full "
-                inputClassName="w-full placeholder:text-sm !p-1.5 !font-[poppins] !px-3"
-                panelClassName=""
+                className="w-full  [&_.p-dropdown-label]:!p-1.5"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1 !font-[poppins]">
-                Address*
-              </label>
-              <InputTextarea
-                value={editingRow.address}
-                placeholder="Type full address..."
-                onChange={(e) =>
-                  setEditingRow({ ...editingRow, address: e.target.value })
-                }
-                className="w-full placeholder:text-sm !p-1.5 !font-[poppins] !px-3"
-              />
-            </div>
-            <div className="flex justify-center gap-2">
+
+            <div className="flex justify-start gap-2">
               <div className="flex flex-col w-[50%]">
                 <label className="block text-sm font-medium mb-1 !font-[poppins]">
                   Lended Date*
                 </label>
                 <Calendar
                   inputClassName="!p-1 !placeholder:text-[8px] !font-[poppins] "
-                  value={editingRow?.lendeddate || null}
+                  value={
+                    editingRow.lendedDate
+                      ? new Date(editingRow.lendedDate)
+                      : null
+                  }
                   onChange={(e) => {
-                    const lended = e.value;
-
-                    if (lended) {
-                      const deadline = new Date(lended);
-                      deadline.setMonth(deadline.getMonth() + 1);
-
-                      setEditingRow({
-                        ...editingRow,
-                        lendeddate: lended,
-                        deadline: deadline,
-                      });
-                    } else {
-                      setEditingRow({
-                        ...editingRow,
-                        lendeddate: null,
-                        deadline: null,
-                      });
-                    }
+                    setEditingRow({
+                      ...editingRow,
+                      lendedDate: e.value,
+                    });
                   }}
                   showButtonBar
                   maxDate={new Date()}
                   placeholder="Select lended date"
                 />
               </div>
-              <div className="flex flex-col w-[50%]">
+              {/* <div className="flex flex-col w-[50%]">
                 {" "}
                 <label className="block text-sm font-medium mb-1 !font-[poppins]">
                   Deadline
@@ -655,24 +605,26 @@ export default function BookLending() {
                   showButtonBar
                   maxDate={new Date()}
                 />
-              </div>{" "}
-              <div className="flex flex-col w-[50%]">
-                {" "}
-                <label className="block text-sm font-medium mb-1 !font-[poppins]">
-                  Returned Date
-                </label>
-                <Calendar
-                  inputClassName="!p-1 !placeholder:text-[8px] !font-[poppins] "
-                  value={editingRow.returneddate}
-                  className=" placeholder:text-sm  !font-[poppins] !p-0"
-                  onChange={(e) =>
-                    setEditingRow({ ...editingRow, returneddate: e.value })
-                  }
-                  showButtonBar
-                  maxDate={new Date()}
-                  placeholder="Enter return date"
-                />
-              </div>
+              </div> */}
+              {editingRow._isNew &&
+                (editingRow?.status === true || editingRow?.status === 1) && (
+                  <div className="flex flex-col w-[50%]">
+                    <label className="block text-sm font-medium mb-1 !font-[poppins]">
+                      Returned Date
+                    </label>
+                    <Calendar
+                      inputClassName="!p-1 !placeholder:text-[8px] !font-[poppins] "
+                      value={editingRow.returneddate}
+                      className=" placeholder:text-sm  !font-[poppins] !p-0"
+                      onChange={(e) =>
+                        setEditingRow({ ...editingRow, returneddate: e.value })
+                      }
+                      showButtonBar
+                      maxDate={new Date()}
+                      placeholder="Enter return date"
+                    />
+                  </div>
+                )}
             </div>
 
             <div>
@@ -732,18 +684,6 @@ export default function BookLending() {
         acceptClassName="m-0 !p-2 !font-[poppins] !text-[14px] !bg-green-500 !border-0"
         rejectClassName="!p-2 !font-[poppins] !text-[14px] !bg-gray-500 !border-0"
         accept={() => {
-          setProducts((prev) =>
-            prev.map((p) =>
-              p.id === selectedRow.id
-                ? {
-                    ...p,
-                    status: "Returned",
-                    returneddate: returndatetemp,
-                    remarks: returnRemarks || "-",
-                  }
-                : p
-            )
-          );
           setReturnRemarks("");
           setconfirmVisible(false);
           toast.current?.show({

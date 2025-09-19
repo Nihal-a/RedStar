@@ -78,8 +78,8 @@ class Books(models.Model):
 
 
 class BooksLending(models.Model):
-    member = models.ForeignKey(Memberships, on_delete=models.CASCADE,blank=True,null=True)
-    book = models.ForeignKey(Books, on_delete=models.CASCADE)
+    member = models.ForeignKey(Memberships, on_delete=models.CASCADE,null=False, blank=False)
+    book = models.ForeignKey(Books, on_delete=models.CASCADE,null=False, blank=False)
     lendedDate = models.DateField(null=False, blank=False)
     returnDate = models.DateField(null=True, blank=True)
     remarks = models.CharField(max_length=200, null=True, blank=True)
