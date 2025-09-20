@@ -25,13 +25,13 @@ const Home = () => {
   };
   return (
     <div className="w-full h-screen flex overflow-hidden font-[Poppins]  ">
-      <div className=" w-[15%] ">
+      <div className="md:block  hidden  ">
         <Sidebar
           selectedMenu={selectedMenu}
           onMenuChange={(menu) => setselectedMenu(menu)}
         />
       </div>
-      <div className="w-[85%] ">
+      <div className="md::w-[85%] w-full">
         {components[selectedMenu] || <Dashboard />}
       </div>
     </div>

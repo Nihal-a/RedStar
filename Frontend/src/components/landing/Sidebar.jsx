@@ -7,8 +7,11 @@ import SidebarItem from "../utils/SidebarItem";
 
 const Sidebar = ({ selectedMenu, onMenuChange }) => {
   return (
-    <section className="w-full h-full flex flex-col shadow-lg">
-      <div className="w-full  flex items-center justify-center py-4 lg:mt-1.5 mt-4.5">
+    <section className=" h-full flex flex-col shadow-lg">
+      <div
+        className="flex items-center justify-center py-4 lg:mt-1.5 mt-4.5 cursor-pointer"
+        onClick={() => onMenuChange("HOME")}
+      >
         <img src={redstar_full} alt="" className="w-[120px] hidden lg:block" />
         <img src={redstar_logo} alt="" className="w-[45px] block lg:hidden" />
       </div>

@@ -4,7 +4,13 @@ export const COUNT = gql`
   query GetCounts {
     counts {
       inventories
+      issuedInvCurrently
+      issuedInvTill
+      books
+      issuedBooksCurrently
+      issuedBooksTill
       categories
+      memberships
     }
   }
 `;
@@ -87,6 +93,7 @@ export const GET_BOOKS = gql`
     }
   }
 `;
+
 export const GET_BOOK_LENDING = gql`
   query GetBookLending {
     bookLending {

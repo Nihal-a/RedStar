@@ -1,102 +1,109 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { COUNT } from "../../graphql/queries";
-import { useQuery, useMutation } from "@apollo/client/react";
+import { useQuery } from "@apollo/client/react";
+import DashboardCard from "../../utils/dashboardCard";
+import { Sidebar } from "primereact/sidebar";
+import { Button } from "primereact/button";
+import CustomSidebar from "../Sidebar";
+import SidebarItem from "../../utils/SidebarItem";
 
-const Dashboard = () => {
+const Dashboard = ({ selectedMenu, onMenuChange }) => {
   const { data, loading, error, refetch } = useQuery(COUNT);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
 
   return (
-    <section className="w-full h-full lg:px-5 px-3.5 lg:py-5 py-3 bg-[#f5f5f5] flex flex-col ">
-      <div className="w-full bg-white rounded-lg shadow-md p-6 flex items-center justify-between ">
+    <section className="w-full h-full lg:px-5 px-3.5 lg:py-5 py-3 bg-[#f5f5f5] flex flex-col">
+      {/* Top Bar */}
+      <div className="w-full bg-white rounded-lg shadow-md p-6 flex items-center justify-between">
         <p className="font-[poppins] font-bold md:text-[22px] text-[16px]">
           DASHBOARD
         </p>
+
+        <div className="md:hidden">
+          <Button
+            icon="pi pi-bars"
+            className="p-button-text"
+            onClick={() => setVisible(true)}
+          />
+        </div>
       </div>
-      <div className="w-full grid grid-cols-1 md:grid-cols-2  xl:grid-cols-3 2xl:grid-cols-4 gap-3 mt-4  ">
-        <div className="bg-white rounded-sm shadow-sm flex items-center justify-center p-7">
-          <div className="flex-1 flex flex-col justify-center gap-0.5">
-            <p className="font-[poppins] font-semibold lg:text-[16px] text-[14px]">
-              INVENTORY
-            </p>
-            <p className="font-[poppins] font-bold lg:text-[33px] text-[27px]">
-              {loading ? "" : data.counts?.inventories}
-            </p>
-            <p className="font-[poppins] font-light text-[14px] text-gray-500">
-              Total number of inventory.
-            </p>
-          </div>
-          <div className=" bg-[#f5f5f5] rounded-lg flex items-center justify-center p-6">
-            <i className="bi bi-box-seam text-gray-400 text-4xl"></i>
-          </div>
-        </div>
-        <div className="bg-white rounded-sm shadow-sm flex items-center justify-center p-7 ">
-          <div className="flex-1 flex flex-col justify-center gap-0.5">
-            <p className="font-[poppins] font-semibold lg:text-[16px] text-[14px]">
-              ISSUED INVENTORY
-            </p>
-            <p className="font-[poppins] font-bold lg:text-[33px] text-[27px]">
-              {loading ? "" : data.counts?.inventories}
-            </p>
-            <p className="font-[poppins] font-light text-[14px] text-gray-500">
-              Inventory currently lented.
-            </p>
-          </div>
-          <div className=" bg-[#f5f5f5] rounded-lg flex items-center justify-center p-6 ">
-            <i className="bi bi-check2-circle text-gray-400 text-4xl"></i>
-          </div>
-        </div>
-        <div className="bg-white rounded-sm shadow-sm flex items-center justify-center p-7">
-          <div className="flex-1 flex flex-col justify-center ">
-            <p className="font-[poppins] font-semibold lg:text-[16px] text-[14px]">
-              BOOKS
-            </p>
-            <p className="font-[poppins] font-bold lg:text-[33px] text-[27px]">
-              {loading ? "" : data.counts?.inventories}
-            </p>
-            <p className="font-[poppins] font-light lg:text-[15px] text-[13px] text-gray-600">
-              Total number of books.
-            </p>
-          </div>
-          <div className=" bg-[#f5f5f5] rounded-lg flex items-center justify-center p-6">
-            <i className="bi bi-collection text-gray-400 text-4xl"></i>
-          </div>
-        </div>
 
-        <div className="bg-white rounded-sm shadow-sm flex items-center justify-center p-7 ">
-          <div className="flex-1 flex flex-col justify-center ">
-            <p className="font-[poppins] font-semibold lg:text-[16px] text-[14px]">
-              ISSUED BOOKS
-            </p>
-            <p className="font-[poppins] font-bold lg:text-[33px] text-[27px]">
-              {loading ? "" : data.counts?.inventories}
-            </p>
-            <p className="font-[poppins] font-light text-[14px] text-gray-500">
-              Books currently lented.
-            </p>
-          </div>
-          <div className="bg-[#f5f5f5] rounded-lg flex items-center justify-center p-6">
-            {" "}
-            <i className="bi bi-journal-check text-gray-400 text-4xl"></i>
-          </div>
-        </div>
+      <Sidebar
+        visible={visible}
+        onHide={() => setVisible(false)}
+        position="left"
+        style={{ width: "250px", padding: 0 }}
+      >
+        <CustomSidebar
+          selectedMenu={selectedMenu}
+          onMenuChange={onMenuChange}
+        />
+      </Sidebar>
 
-        <div className="bg-white rounded-sm shadow-sm flex items-center justify-center p-7 ">
-          <div className="flex-1 flex flex-col justify-center gap-0.5">
-            <p className="font-[poppins] font-semibold lg:text-[16px] text-[14px]">
-              FUND
-            </p>
-            <p className="font-[poppins] font-bold lg:text-[33px] text-[27px]">
-              1000<i className="bi bi-currency-rupee"></i>
-            </p>
-            <p className="font-[poppins] font-light text-[14px] text-gray-500 ">
-              Available fund.
-            </p>
-          </div>
-          <div className=" bg-[#f5f5f5] rounded-lg flex items-center justify-center p-6">
-            {" "}
-            <i className="bi bi-wallet2 text-gray-400 text-4xl"></i>
-          </div>
-        </div>
+      {/* Dashboard Cards */}
+      <div className="bg-white rounded-lg shadow-md p-4 w-full grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 mt-4">
+        {loading || error ? (
+          loading ? (
+            <p>Loading dashboard...</p>
+          ) : (
+            <p>Error: {error.message}</p>
+          )
+        ) : (
+          <>
+            <DashboardCard
+              main_head="INVENTORY"
+              number={data?.counts?.inventories}
+              sub_head="Total number of inventory."
+              icon="box-seam"
+            />
+            <DashboardCard
+              main_head="TOTAL ISSUED INVENTORY"
+              number={data?.counts?.issuedInvTill}
+              sub_head="Total number of people helped by our inventories so far."
+              icon="check2-circle"
+            />
+            <DashboardCard
+              main_head="ISSUED INVENTORIES CURRENTLY"
+              number={data?.counts?.issuedInvCurrently}
+              sub_head="Total number of inventories actively helping people"
+              icon="check2-circle"
+            />
+            <DashboardCard
+              main_head="BOOKS"
+              number={data?.counts?.books}
+              sub_head="Total number of books."
+              icon="collection"
+            />
+            <DashboardCard
+              main_head="TOTAL ISSUED BOOKS"
+              number={data?.counts?.issuedBooksTill}
+              sub_head="Total number of books lent out up to today."
+              icon="check2-circle"
+            />
+            <DashboardCard
+              main_head="ISSUED BOOKS CURRENTLY"
+              number={data?.counts?.issuedBooksCurrently}
+              sub_head="Total number of books lent out currently."
+              icon="journal-check"
+            />
+            <DashboardCard
+              main_head="MEMBERSHIPS"
+              number={data?.counts?.memberships}
+              sub_head="Total number of memberships."
+              icon="journal-check"
+            />
+            <DashboardCard
+              main_head="FUND"
+              number="1000"
+              sub_head="Available fund."
+              icon="wallet2"
+            />
+          </>
+        )}
       </div>
     </section>
   );

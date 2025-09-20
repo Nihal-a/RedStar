@@ -51,7 +51,6 @@ export default function Book() {
         )}`
       );
       const data = await res.json();
-      console.log(data);
       if (data.items) {
         const mapped = data.items.map((item) => {
           const info = item.volumeInfo;
@@ -64,7 +63,6 @@ export default function Book() {
         setBookSuggestions(mapped);
       }
     } catch (err) {
-      console.error("Error fetching books:", err);
       setBookSuggestions([]);
     }
   };
@@ -167,21 +165,28 @@ export default function Book() {
       rejectLabel: "Cancel",
       draggable: false,
       accept: async () => {
-        await deleteBook({
-          variables: { id: rowData.id },
-          refetchQueries: [{ query: GET_BOOKS }],
-          awaitRefetchQueries: true,
-        });
-        toast.current?.show({
-          severity: "success",
-          summary: "Deleted",
-          detail: "Book removed",
-        });
+        try {
+          await deleteBook({
+            variables: { id: rowData.id },
+            refetchQueries: [{ query: GET_BOOKS }],
+            awaitRefetchQueries: true,
+          });
+          toast.current?.show({
+            severity: "success",
+            summary: "Deleted",
+            detail: "Book removed",
+          });
+        } catch (err) {
+          toast.current?.show({
+            severity: "error",
+            summary: "Error",
+            detail: err.message || "Lending Book not returned yet.",
+          });
+        }
       },
     });
   };
 
-  /* ---------- Helpers ---------- */
   const onGlobalFilterChange = (e) => {
     const value = e.target.value;
     const _filters = { ...filters };
@@ -283,20 +288,19 @@ export default function Book() {
                 body={(rowData) => (
                   <div className="w-full flex items-center justify-center gap-2">
                     <button
-                      className=" !bg-blue-500 !text-white flex items-center justify-center rounded-[6px] p-2.5 cursor-pointer"
                       onClick={() => {
                         setEditingRow(rowData);
                         setOriginalRow({ ...rowData });
                         setVisible(true);
                       }}
                     >
-                      <i class="bi bi-pencil leading-none"></i>
+                      <i className="bi bi-pencil  cursor-pointer text-blue-500 p-2 rounded bg-blue-100"></i>
                     </button>
                     <button
-                      className=" !bg-red-500 !text-white flex items-center justify-center rounded-[6px] p-2.5 cursor-pointer"
+                      className=" "
                       onClick={() => confirmDelete(rowData)}
                     >
-                      <i class="bi bi-trash leading-none"></i>
+                      <i className="bi bi-trash  cursor-pointer text-red-500 p-2 rounded bg-red-100"></i>
                     </button>
                   </div>
                 )}
@@ -466,7 +470,8 @@ export default function Book() {
                 onValueChange={(e) =>
                   setEditingRow({ ...editingRow, count: e.value ?? 0 })
                 }
-                className="w-full placeholder:text-sm !p-1.5 !font-[poppins] !px-3"
+                inputClassName="!p-1.5 !px-3"
+                className="w-full placeholder:text-sm  !font-[poppins] "
                 min={1}
                 showButtons
               />

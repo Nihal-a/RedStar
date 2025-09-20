@@ -4,7 +4,6 @@ import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { InputTextarea } from "primereact/inputtextarea";
-import { AutoComplete } from "primereact/autocomplete";
 import { Toast } from "primereact/toast";
 import { ConfirmDialog, confirmDialog } from "primereact/confirmdialog";
 import { Dialog } from "primereact/dialog";
@@ -21,6 +20,7 @@ import { format, addMonths } from "date-fns";
 import {
   ADD_BOOK_LENDING,
   DELETE_BOOK_LENDING,
+  RETURN_BOOK_LENDING,
   UPDATE_BOOK_LENDING,
 } from "../../graphql/mutations";
 
@@ -46,6 +46,7 @@ export default function BookLending() {
   const [addBookLending] = useMutation(ADD_BOOK_LENDING);
   const [deleteBookLending] = useMutation(DELETE_BOOK_LENDING);
   const [updateBookLending] = useMutation(UPDATE_BOOK_LENDING);
+  const [returnBookLending] = useMutation(RETURN_BOOK_LENDING);
 
   const [filters, setFilters] = useState({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
@@ -59,8 +60,6 @@ export default function BookLending() {
   const [visible, setVisible] = useState(false);
   const [editingRow, setEditingRow] = useState(null);
   const [originalRow, setOriginalRow] = useState(null);
-  const [authorSuggestions, setAuthorSuggestions] = useState([]);
-
   const [confirmVisible, setconfirmVisible] = useState(false);
   const [returnRemarks, setReturnRemarks] = useState("");
   const [returndatetemp, setreturndatetemp] = useState(new Date());
@@ -91,12 +90,6 @@ export default function BookLending() {
     setVisible(true);
   };
 
-  const confirmReturn = (rowData) => {
-    setSelectedRow(rowData);
-    setReturnRemarks("");
-    setconfirmVisible(true);
-  };
-
   const saveRow = async () => {
     if (!editingRow.member || !editingRow.book || !editingRow.lendedDate) {
       toast.current?.show({
@@ -112,9 +105,6 @@ export default function BookLending() {
     try {
       if (editingRow._isNew) {
         // CREATE
-        console.log("okok");
-        console.log(editingRow);
-        console.log(normalizedLendedDate);
         await addBookLending({
           variables: {
             member: parseInt(editingRow.member),
@@ -186,6 +176,50 @@ export default function BookLending() {
       });
     }
   };
+  const confirmReturn = (rowData) => {
+    setSelectedRow(rowData);
+    setReturnRemarks("");
+    setconfirmVisible(true);
+  };
+
+  const markReturn = async (id) => {
+    if (!returndatetemp || !id) {
+      toast.current?.show({
+        severity: "warn",
+        summary: "Validation",
+        detail: "Please select return date.",
+      });
+      return;
+    }
+    try {
+      const date = normalizeDate(returndatetemp);
+      await returnBookLending({
+        variables: {
+          id: id,
+          remarks: returnRemarks,
+          returnDate: date,
+        },
+        refetchQueries: [
+          { query: GET_BOOK_LENDING },
+          { query: GET_MEMEBRSHIPS },
+          { query: GET_BOOKS },
+        ],
+        awaitRefetchQueries: true,
+      });
+      setconfirmVisible(false);
+      toast.current?.show({
+        severity: "success",
+        summary: "Saved",
+        detail: "Book Return Marked ",
+      });
+    } catch (err) {
+      toast.current?.show({
+        severity: "error",
+        summary: "Error",
+        detail: err.message,
+      });
+    }
+  };
 
   const confirmDelete = (rowData) => {
     confirmDialog({
@@ -242,12 +276,9 @@ export default function BookLending() {
     setFirst(e.first);
     setRows(e.rows);
   };
-
+  console.log(bookData);
   return (
     <section className="w-full min-h-screen px-5 py-5 bg-[#f5f5f5]">
-      <Toast ref={toast} />
-      <ConfirmDialog />
-
       <div className="w-full  bg-white rounded-lg shadow-md p-4 mb-4 flex  items-center justify-between ">
         <div className="w-full flex flex-col md:flex-row items-center justify-between gap-3">
           <div className="">
@@ -255,7 +286,7 @@ export default function BookLending() {
               INVENTORY LENDING
             </h1>
             <p className="text-sm text-gray-500 ">
-              Manage lents, add/edit lents
+              Manage books lents, add/edit lents
             </p>
           </div>
           <div className="flex gap-3">
@@ -302,16 +333,15 @@ export default function BookLending() {
             <DataTable
               value={data.bookLending}
               dataKey="id"
-              paginator
-              rows={10}
-              alwaysShowPaginator={true}
-              paginatorClassName="mt-3 "
+              alwaysShowPaginator={false}
+              paginatorClassName="mt-3"
+              paginator={data.bookLending?.length > 5}
+              rowsPerPageOptions={[5, 10, 20, 50]}
               removableSort
               size="small"
               stripedRows
               first={first}
               onPage={onPage} //for when adding new coloumn new added will be listed at last
-              rowsPerPageOptions={[5, 10, 20, 30]}
               filters={filters}
               globalFilterFields={[
                 "name",
@@ -340,27 +370,32 @@ export default function BookLending() {
                 body={(rowData) => (
                   <div className="w-full flex items-center justify-center gap-2">
                     <button
-                      className=" !bg-blue-500 !text-white flex items-center justify-center rounded-[6px] p-2.5 cursor-pointer"
+                      className="   "
                       onClick={() => {
                         setEditingRow(rowData);
                         setOriginalRow({ ...rowData });
                         setVisible(true);
                       }}
                     >
-                      <i class="bi bi-pencil leading-none"></i>
+                      <i className="bi bi-pencil  cursor-pointer text-blue-500 p-2 rounded bg-blue-100"></i>
                     </button>
                     <button
-                      className=" !bg-red-500 !text-white flex items-center justify-center rounded-[6px] p-2.5 cursor-pointer"
+                      className=" "
                       onClick={() => confirmDelete(rowData)}
                     >
-                      <i class="bi bi-trash leading-none"></i>
+                      <i className="bi bi-trash  cursor-pointer text-red-500 p-2 rounded bg-red-100"></i>
                     </button>
-                    <button
-                      className=" !bg-green-500 !text-white flex items-center justify-center rounded-[6px] p-2.5 cursor-pointer"
-                      onClick={() => confirmReturn(rowData)}
-                    >
-                      <i class="bi bi-check-lg leading-none"></i>
-                    </button>
+
+                    {rowData.status ? (
+                      ""
+                    ) : (
+                      <button
+                        className=" "
+                        onClick={() => confirmReturn(rowData)}
+                      >
+                        <i className="bi bi-check-lg  cursor-pointer text-green-500 p-2 rounded bg-green-100"></i>
+                      </button>
+                    )}
                   </div>
                 )}
                 alignHeader={"center"}
@@ -515,56 +550,66 @@ export default function BookLending() {
               <label className="block text-sm font-medium mb-1 !font-[poppins]">
                 Lender*
               </label>
-              <Dropdown
-                value={
-                  editingRow?.member
-                    ? typeof editingRow.member === "object"
-                      ? editingRow.member?.id?.toString()
-                      : editingRow.member?.toString()
-                    : ""
-                }
-                options={[
-                  { label: "Select Member", value: "" },
-                  ...(memberData?.memberships?.map((mbr) => ({
-                    label: `${mbr.name} (${mbr.membershipId})`,
-                    value: mbr.id.toString(),
-                  })) || []),
-                ]}
-                placeholder="Type lender name..."
-                onChange={(e) =>
-                  setEditingRow({ ...editingRow, member: e.value || "" })
-                }
-                // filter
-                // filterBy="label"
-                className="w-full placeholder:text-sm !font-[poppins] [&_.p-dropdown-label]:!p-1.5 "
-              />
+              {memberLoading ? (
+                ""
+              ) : (
+                <Dropdown
+                  value={
+                    editingRow?.member
+                      ? typeof editingRow.member === "object"
+                        ? editingRow.member?.id?.toString()
+                        : editingRow.member?.toString()
+                      : ""
+                  }
+                  options={[
+                    { label: "Select Member", value: "" },
+                    ...(memberData?.memberships?.map((mbr) => ({
+                      label: `${mbr.name} (${mbr.membershipId})`,
+                      value: mbr.id.toString(),
+                    })) || []),
+                  ]}
+                  placeholder="Type lender name..."
+                  onChange={(e) =>
+                    setEditingRow({ ...editingRow, member: e.value || "" })
+                  }
+                  // filter
+                  // filterBy="label"
+                  className="w-full placeholder:text-sm !font-[poppins] [&_.p-dropdown-label]:!p-1.5 "
+                />
+              )}
             </div>
 
             <div>
               <label className="block text-sm font-medium mb-1 !font-[poppins]">
                 book Name*
               </label>
-              <Dropdown
-                value={
-                  editingRow?.book
-                    ? typeof editingRow.book === "object"
-                      ? editingRow.book?.id?.toString?.() || ""
-                      : editingRow.book?.toString?.() || ""
-                    : ""
-                }
-                options={[
-                  { label: "Select Book", value: "" },
-                  ...(bookData?.books?.map((book) => ({
-                    label: book.name,
-                    value: book.id.toString(),
-                  })) || []),
-                ]}
-                onChange={(e) => {
-                  setEditingRow({ ...editingRow, book: e.value || "" });
-                }}
-                placeholder="Select book..."
-                className="w-full  [&_.p-dropdown-label]:!p-1.5"
-              />
+              {bookLoading ? (
+                ""
+              ) : (
+                <Dropdown
+                  value={
+                    editingRow?.book
+                      ? typeof editingRow.book === "object"
+                        ? editingRow.book?.id?.toString?.() || ""
+                        : editingRow.book?.toString?.() || ""
+                      : ""
+                  }
+                  options={[
+                    { label: "Select Book", value: "" },
+                    ...(bookData?.books?.map((book) => ({
+                      label: book.name,
+                      value: book.id.toString(),
+                      disabled: book.available === 0,
+                    })) || []),
+                  ]}
+                  onChange={(e) => {
+                    setEditingRow({ ...editingRow, book: e.value || "" });
+                  }}
+                  placeholder="Select book..."
+                 
+                  className="w-full  [&_.p-dropdown-label]:!p-1.5 "
+                />
+              )}
             </div>
 
             <div className="flex justify-start gap-2">
@@ -606,7 +651,7 @@ export default function BookLending() {
                   maxDate={new Date()}
                 />
               </div> */}
-              {editingRow._isNew &&
+              {!editingRow._isNew &&
                 (editingRow?.status === true || editingRow?.status === 1) && (
                   <div className="flex flex-col w-[50%]">
                     <label className="block text-sm font-medium mb-1 !font-[poppins]">
@@ -614,12 +659,21 @@ export default function BookLending() {
                     </label>
                     <Calendar
                       inputClassName="!p-1 !placeholder:text-[8px] !font-[poppins] "
-                      value={editingRow.returneddate}
+                      value={
+                        editingRow.returnDate
+                          ? new Date(editingRow.returnDate)
+                          : null
+                      }
                       className=" placeholder:text-sm  !font-[poppins] !p-0"
                       onChange={(e) =>
                         setEditingRow({ ...editingRow, returneddate: e.value })
                       }
                       showButtonBar
+                      minDate={
+                        editingRow.lendedDate
+                          ? new Date(editingRow.lendedDate)
+                          : null
+                      }
                       maxDate={new Date()}
                       placeholder="Enter return date"
                     />
@@ -644,56 +698,60 @@ export default function BookLending() {
         )}
       </Dialog>
 
-      <ConfirmDialog
+      <Dialog
         className="w-[90%] md:w-[25%]"
         visible={confirmVisible}
         onHide={() => setconfirmVisible(false)}
+        draggable={false}
         header="Return Confirmation"
-        message={
-          <div className="flex flex-col gap-3">
-            <p>
-              {selectedRow?.name || "This person"} is returning{" "}
-              {selectedRow?.book || "this item"}?.
-            </p>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Return Date
-              </label>
-              <Calendar
-                inputClassName="!p-1"
-                value={returndatetemp}
-                className=" placeholder:text-sm  !font-[poppins] !p-0"
-                onChange={(e) => setreturndatetemp(e.value)}
-                showButtonBar
-                maxDate={new Date()}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Remarks</label>
-              <InputTextarea
-                value={returnRemarks}
-                onChange={(e) => setReturnRemarks(e.target.value)}
-                placeholder="Enter remarks..."
-                className="w-full placeholder:text-sm !p-1.5 !font-[poppins] !px-3"
-              />
-            </div>
-          </div>
-        }
         acceptLabel="Confirm"
-        rejectLabel="Cancel"
-        acceptClassName="m-0 !p-2 !font-[poppins] !text-[14px] !bg-green-500 !border-0"
-        rejectClassName="!p-2 !font-[poppins] !text-[14px] !bg-gray-500 !border-0"
-        accept={() => {
-          setReturnRemarks("");
-          setconfirmVisible(false);
-          toast.current?.show({
-            severity: "success",
-            summary: "Updated",
-            detail: "Return Confirmed",
-          });
-        }}
-        reject={() => setReturnRemarks("")}
-      />
+      >
+        <div className="flex flex-col gap-3 ">
+          <p>
+            {selectedRow?.member?.name || "This person"} is returning{" "}
+            {selectedRow?.book?.name || "this book"}?.
+          </p>
+          <div className="">
+            <label className="block text-sm font-medium mb-1">
+              Return Date
+            </label>
+            <Calendar
+              inputClassName="!p-1"
+              value={returndatetemp}
+              className=" placeholder:text-sm  !font-[poppins] !p-0"
+              onChange={(e) => setreturndatetemp(e.value)}
+              showButtonBar
+              maxDate={new Date()}
+              dateFormat="dd-mm-yy"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Remarks</label>
+            <InputTextarea
+              value={returnRemarks}
+              onChange={(e) => setReturnRemarks(e.target.value)}
+              placeholder="Enter remarks..."
+              className="w-full placeholder:text-sm !p-1.5 !font-[poppins] !px-3"
+            />
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 mt-5">
+          <button
+            className="!font-[poppins] !text-[14px] p-2 font-semibold !text-white bg-gray-500 rounded-md cursor-pointer hover:bg-gray-600"
+            onClick={() => setconfirmVisible(false)}
+          >
+            Cancel
+          </button>
+          <button
+            className="!font-[poppins] !text-[14px] p-2 font-semibold !text-white bg-green-500 rounded-md cursor-pointer hover:bg-green-600"
+            onClick={() => markReturn(selectedRow.id)}
+          >
+            Mark Return
+          </button>
+        </div>
+      </Dialog>
+      <Toast ref={toast} />
+      <ConfirmDialog />
     </section>
   );
 }

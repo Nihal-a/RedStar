@@ -380,44 +380,32 @@ export const UPDATE_BOOK_LENDING = gql`
   }
 `;
 
-export const DELETE_BOOK_LENDING = gql`
-  mutation deleteBookLending($id: ID!) {
-    deleteBookLending(id: $id) {
-      ok
-    }
-  }
-`;
-
-
 export const RETURN_BOOK_LENDING = gql`
-  mutation returnInventoryLending(
-    $id: ID!
-    $returnDate: Date!
-    $remarks: String
-  ) {
-    returnInventoryLending(
-      id: $id
-      returnDate: $returnDate
-      remarks: $remarks
-    ) {
-      inventoryLending {
+  mutation returnBookLending($id: ID!, $returnDate: Date!, $remarks: String) {
+    returnBookLending(id: $id, returnDate: $returnDate, remarks: $remarks) {
+      bookLending {
         id
-        name
-        mobileNumber
-        address
-        inventory {
+        member {
           id
           name
-          category {
-            id
-            name
-          }
+        }
+        book {
+          id
+          name
         }
         lendedDate
         returnDate
         remarks
         status
       }
+    }
+  }
+`;
+
+export const DELETE_BOOK_LENDING = gql`
+  mutation deleteBookLending($id: ID!) {
+    deleteBookLending(id: $id) {
+      ok
     }
   }
 `;

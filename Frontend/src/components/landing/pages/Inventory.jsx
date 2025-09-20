@@ -319,7 +319,10 @@ export default function Inventory() {
           </div>
           <div className="h-full flex flex-wrap gap-3 items-center justify-center md:justify-start w-full md:w-auto">
             <button
-              onClick={() => setVisible(true)}
+              onClick={() => {
+                setEditingRow({ name: "", category: "" });
+                setVisible(true);
+              }}
               className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center flex-shrink-0"
             >
               Add Inventory
@@ -388,7 +391,7 @@ export default function Inventory() {
             >
               <Column
                 header="S.No"
-                headerClassName="font-[poppins]"
+                headerClassName="font-[poppins] uppercase"
                 body={(rowData, options) => options.rowIndex + 1}
                 alignHeader={"center"}
                 style={{
@@ -399,7 +402,7 @@ export default function Inventory() {
 
               <Column
                 header="View"
-                headerClassName="font-[poppins]"
+                headerClassName="font-[poppins] uppercase"
                 body={(rowData) => (
                   <i
                     className="pi pi-eye cursor-pointer text-blue-500 p-2 rounded bg-blue-100"
@@ -418,7 +421,7 @@ export default function Inventory() {
 
               <Column
                 header="Image"
-                headerClassName=""
+                headerClassName="uppercase"
                 body={(rowData) => {
                   return rowData.image ? (
                     <img
@@ -441,10 +444,10 @@ export default function Inventory() {
               <Column
                 field="name"
                 header="Category"
-                headerClassName="font-[poppins]"
+                headerClassName="font-[poppins] uppercase"
+                className="uppercase"
                 alignHeader={"center"}
                 style={{
-                  // width: "15%",
                   textAlign: "center",
                 }}
               />
@@ -460,7 +463,7 @@ export default function Inventory() {
                     </div>
                   );
                 }}
-                headerClassName="font-[poppins]"
+                headerClassName="font-[poppins] uppercase"
                 alignHeader={"center"}
                 style={{
                   width: "10%",
@@ -482,7 +485,7 @@ export default function Inventory() {
                   );
                 }}
                 sortable
-                headerClassName="font-[poppins]"
+                headerClassName="font-[poppins] uppercase"
                 alignHeader={"center"}
                 style={{
                   width: "13%",
@@ -492,7 +495,7 @@ export default function Inventory() {
 
               <Column
                 header="Status"
-                headerClassName="font-[poppins]"
+                headerClassName="font-[poppins] uppercase"
                 body={(rowData) => {
                   const availableCount =
                     rowData?.inventories?.filter(
@@ -817,6 +820,7 @@ export default function Inventory() {
                     textAlign: "center",
                   }}
                 />
+
                 <Column
                   header="Actions"
                   headerClassName="font-[poppins]"

@@ -382,7 +382,7 @@ export default function InventoryLending() {
               INVENTORY LENDING
             </h1>
             <p className="text-sm text-gray-500 ">
-              Manage lents, add/edit lents
+              Manage inventory lents, add/edit lents
             </p>
           </div>
           <div className="flex gap-3">
@@ -726,6 +726,7 @@ export default function InventoryLending() {
                     setEditingRow(newEditingRow);
                   }}
                   placeholder="Select a category"
+                  className="[&_.p-dropdown-label]:!p-1.5"
                 />
               </div>
               <div className="flex flex-col w-[50%]">
@@ -747,6 +748,7 @@ export default function InventoryLending() {
                     setEditingRow({ ...editingRow, inventory: e.value });
                   }}
                   placeholder="Select inventory"
+                  className="[&_.p-dropdown-label]:!p-1.5"
                   disabled={!editingRow.category} // Disable if no category selected
                 />
                 {editingRow.category &&

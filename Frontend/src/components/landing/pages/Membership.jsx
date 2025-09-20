@@ -220,7 +220,7 @@ export default function Membership() {
       <div className="bg-white rounded-lg shadow-md p-4 ">
         {loading || error ? (
           loading ? (
-            <p>Loading inventories...</p>
+            <p>Loading memberships...</p>
           ) : (
             <p>Error: {error.message}</p>
           )
@@ -248,7 +248,7 @@ export default function Membership() {
               rowsPerPageOptions={[5, 10, 20, 50]}
               rows={rows}
               first={first}
-              removableSort // <-- update state
+              removableSort 
               size="small"
               stripedRows
               onPage={onPage} //for when adding new coloumn new added will be listed at last
@@ -274,20 +274,19 @@ export default function Membership() {
                 body={(rowData) => (
                   <div className="w-full flex items-center justify-center gap-2">
                     <button
-                      className=" !bg-blue-500 !text-white flex items-center justify-center rounded-[6px] p-2.5 cursor-pointer"
+                      className=" "
                       onClick={() => {
                         setEditingRow(rowData);
                         setOriginalRow(rowData);
                         setVisible(true);
                       }}
                     >
-                      <i class="bi bi-pencil leading-none"></i>
+                      <i className="bi bi-pencil  cursor-pointer text-blue-500 p-2 rounded bg-blue-100"></i>
                     </button>
                     <button
-                      className=" !bg-red-500 !text-white flex items-center justify-center rounded-[6px] p-2.5 cursor-pointer"
                       onClick={() => confirmDelete(rowData)}
                     >
-                      <i class="bi bi-trash leading-none"></i>
+                      <i className="bi bi-trash  cursor-pointer text-red-500 p-2 rounded bg-red-100"></i>
                     </button>
                   </div>
                 )}

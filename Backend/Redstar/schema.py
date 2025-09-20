@@ -6,8 +6,10 @@ from .models import *
 from graphene_file_upload.scalars import Upload
 from django.conf import settings
 from datetime import datetime
+from django.db.models import F,Sum
 
 
+# membershipId Generator function
 def MembershipIdGenerator(last_id=None):
     prefix = "BMLIB" 
     date_code = datetime.now().strftime("%m%y")
@@ -26,6 +28,9 @@ def MembershipIdGenerator(last_id=None):
     
     serial_str = str(new_serial).zfill(4)
     return f"{prefix}{date_code}-{serial_str}"
+
+
+
 class InventoryType(DjangoObjectType):
     class Meta:
         model = Inventory
@@ -68,8 +73,14 @@ class BookLendingType(DjangoObjectType):
 
 class CountsType(graphene.ObjectType):
     inventories = graphene.Int()
+    issuedInvCurrently = graphene.Int()
+    issuedInvTill = graphene.Int()
+    books = graphene.Int()
+    issuedBooksCurrently = graphene.Int()
+    issuedBooksTill = graphene.Int()
     categories = graphene.Int()
-    
+    memberships = graphene.Int()
+
 class Query(graphene.ObjectType):
     books = graphene.List(BookType)
     inventories = graphene.List(InventoryType)
@@ -80,32 +91,38 @@ class Query(graphene.ObjectType):
     book_lending = graphene.List(BookLendingType)
 
     def resolve_categories(root, info):
-        return Category.objects.all()
+        return Category.objects.all().order_by("name")
     
     def resolve_inventories(root, info):
-        return Inventory.objects.all()
+        return Inventory.objects.all().order_by("name")
 
     def resolve_inventory_lending(root, info):
-        return InventoryLending.objects.all()
+        return InventoryLending.objects.all().order_by("-lendedDate")
 
     def resolve_memberships(root, info):
-        return Memberships.objects.all()
+        return Memberships.objects.all().order_by("name")
        
     def resolve_books(root, info):
-        return Books.objects.all()
+        return Books.objects.all().order_by("name")
     
     def resolve_book_lending(root, info):
-        return BooksLending.objects.all()
+        return BooksLending.objects.all().order_by("-lendedDate")
     
     def resolve_counts(root, info):
+        total_books = Books.objects.aggregate(total=Sum('total'))['total'] or 0  
+
         return {
             "inventories": Inventory.objects.count(),
+            "issuedInvCurrently": Inventory.objects.filter(status=False).count(),
+            "issuedInvTill": InventoryLending.objects.count(),
+            "books": total_books,  # <-- pass the integer
+            "issuedBooksCurrently": BooksLending.objects.filter(status=False).count(),
+            "issuedBooksTill": BooksLending.objects.count(),
+            "memberships" :Memberships.objects.count(),
             "categories": Category.objects.count(),
         }
-
+temp =  Books.objects.aggregate(Sum('total'))
 schema = graphene.Schema(query=Query)
-
-
 class CreateInventory(graphene.Mutation):
     class Arguments:
         name = graphene.String(required=True)
@@ -420,11 +437,13 @@ class DeleteBook(graphene.Mutation):
     def mutate(self, info, id):
         try:
             book = Books.objects.get(pk=id)
-            book.delete()
-            return DeleteBook(ok=True)
+            
+            if book.available == book.total:
+                book.delete()
+                return DeleteBook(ok=True)
+            raise Exception("Cannot delete book: some copies are still lent out.")
         except Books.DoesNotExist:
-            return DeleteBook(ok=False)
-
+            raise Exception("Book not found")
 
 
 class CreateBookLending(graphene.Mutation):
@@ -444,9 +463,16 @@ class CreateBookLending(graphene.Mutation):
 
         try:
             book_obj = Books.objects.get(pk=book)
+
         except Books.DoesNotExist:
             raise GraphQLError("Book not found")
-
+        
+        if book_obj.available == 0 :
+            raise GraphQLError("Book not avaialable")
+        else:
+            book_obj.available -= 1
+            book_obj.save()
+            
         book_lending = BooksLending.objects.create(
             member=member_obj,
             book=book_obj,
@@ -477,25 +503,58 @@ class UpdateBookLending(graphene.Mutation):
             raise Exception("Lending record not found")
 
         for field, value in kwargs.items():
-            print("ok")
             if value is not None:
                 if field == "book":
                     old_book = lending.book
                     if old_book:
                         old_book.available += 1
                         old_book.save()
-                    
 
                     new_book = Books.objects.get(pk=int(value))
-                    new_book.available -= 1
-                    new_book.save()
+
+                    if new_book.available == 0 :
+                        raise GraphQLError("Book not avaialable")
+                    else:
+                        new_book.available -= 1
+                        new_book.save()
 
                     setattr(lending, field, new_book)
+
+                elif field == "member":
+                    new_member = Memberships.objects.get(pk=int(value))
+                    setattr(lending, field, new_member)
+
                 else:
                     setattr(lending, field, value)
 
         lending.save()
         return UpdateBookLending(book_lending=lending)
+
+
+class ReturnBookLending(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+        returnDate = graphene.Date(required=True)
+        remarks = graphene.String()
+
+    book_lending = graphene.Field(BookLendingType)
+
+    def mutate(self, info, id, returnDate, remarks=None  ):
+        try:
+            lending = BooksLending.objects.get(pk=id)
+        except BooksLending.DoesNotExist:
+            raise Exception("Lending record not found")
+        
+        lending.returnDate = returnDate
+        lending.status = True
+        if remarks is not None:
+            lending.remarks = remarks
+        lending.save()
+        
+        Books.objects.filter(pk=lending.book.pk).update(available=F('available') + 1)
+       
+        return ReturnBookLending(book_lending=lending)
+
     
 class DeleteBookLending(graphene.Mutation):
     class Arguments:
@@ -537,8 +596,9 @@ class Mutation(graphene.ObjectType):
     update_book = UpdateBook.Field()
 
     create_book_lending =  CreateBookLending.Field()
-    delete_book_lending = DeleteBookLending.Field()
     update_book_lending = UpdateBookLending.Field()
+    return_book_lending = ReturnBookLending.Field()
+    delete_book_lending = DeleteBookLending.Field()
 
 
 schema = graphene.Schema(query=Query, mutation=Mutation)
