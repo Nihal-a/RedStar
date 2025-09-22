@@ -1,5 +1,7 @@
+import tempfile
+from django.http import HttpResponse
 import graphene
-import os
+import os,base64
 from graphql import GraphQLError
 from graphene_django.types import DjangoObjectType
 from .models import *
@@ -7,6 +9,11 @@ from graphene_file_upload.scalars import Upload
 from django.conf import settings
 from datetime import datetime
 from django.db.models import F,Sum
+from weasyprint import HTML
+from graphene import Field
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
+os.environ["G_MESSAGES_DEBUG"] = "none"
 
 
 # membershipId Generator function
@@ -71,6 +78,7 @@ class BookLendingType(DjangoObjectType):
         fields = ("id", "member", "book", "lendedDate", "returnDate", "remarks", "status")
 
 
+
 class CountsType(graphene.ObjectType):
     inventories = graphene.Int()
     issuedInvCurrently = graphene.Int()
@@ -81,6 +89,11 @@ class CountsType(graphene.ObjectType):
     categories = graphene.Int()
     memberships = graphene.Int()
 
+
+class PrintPdf(graphene.ObjectType):
+    url = graphene.String()
+    
+
 class Query(graphene.ObjectType):
     books = graphene.List(BookType)
     inventories = graphene.List(InventoryType)
@@ -89,6 +102,23 @@ class Query(graphene.ObjectType):
     counts = graphene.Field(CountsType)
     memberships = graphene.List(MembershipsType)
     book_lending = graphene.List(BookLendingType)
+    printPdf = Field(PrintPdf, path=graphene.String(required=True))
+
+    def resolve_printPdf(root, info, path):
+        print(path)
+        print("2222222222222222222222222222")
+        # print("00000000000000000000000000000000000000000000000000000000"+html_string)
+        html = HTML(url=path)
+        print(html)
+        pdf = html.write_pdf()
+
+        fileName = f"report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        filePath = default_storage.save(f"reports/{fileName}", tempfile.NamedTemporaryFile())
+        with default_storage.open(filePath, 'wb') as f:
+            f.write(pdf)
+        
+        return PrintPdf(url=default_storage.url(filePath))
+
 
     def resolve_categories(root, info):
         return Category.objects.all().order_by("name")
@@ -121,8 +151,10 @@ class Query(graphene.ObjectType):
             "memberships" :Memberships.objects.count(),
             "categories": Category.objects.count(),
         }
-temp =  Books.objects.aggregate(Sum('total'))
 schema = graphene.Schema(query=Query)
+
+
+
 class CreateInventory(graphene.Mutation):
     class Arguments:
         name = graphene.String(required=True)
@@ -599,6 +631,7 @@ class Mutation(graphene.ObjectType):
     update_book_lending = UpdateBookLending.Field()
     return_book_lending = ReturnBookLending.Field()
     delete_book_lending = DeleteBookLending.Field()
+
 
 
 schema = graphene.Schema(query=Query, mutation=Mutation)

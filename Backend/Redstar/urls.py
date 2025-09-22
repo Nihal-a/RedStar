@@ -5,6 +5,9 @@ from django.conf.urls.static import static
 from django.conf import settings
 from graphene_file_upload.django import FileUploadGraphQLView
 
+from Redstar.views import resolve_printPdf
+
 urlpatterns = [
     # path("graphql/", csrf_exempt(FileUploadGraphQLView.as_view(graphiql=True))),
+    path("print/", csrf_exempt(resolve_printPdf)),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

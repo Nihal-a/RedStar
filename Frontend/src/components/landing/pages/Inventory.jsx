@@ -20,6 +20,7 @@ import {
   UPDATE_CATEGORY,
   UPDATE_INVENTORY,
 } from "../../graphql/mutations";
+import { useNavigate } from "react-router-dom";
 
 export default function Inventory() {
   //queries
@@ -50,6 +51,7 @@ export default function Inventory() {
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [first, setFirst] = useState(0);
   const [rows, setRows] = useState(5);
+  const navigate = useNavigate();
 
   //Category modal States
   const [categoryModalVisible, setcategoryModalVisible] = useState(false);
@@ -276,7 +278,7 @@ export default function Inventory() {
     const _filters = { ...filters };
     _filters["global"].value = value;
     setFilters(_filters);
-    setcategoryFilterValue(value);
+    setGlobalFilterValue(value);
   };
 
   //searching filteration category datatable
@@ -295,6 +297,12 @@ export default function Inventory() {
     setRows(e.rows);
   };
 
+  const exportPdf = () => {
+
+
+
+  };
+
   //for inline edit text editor openup a inut field
   const textEditor = (options) => {
     return (
@@ -308,7 +316,7 @@ export default function Inventory() {
   };
 
   return (
-    <section className="w-full min-h-screen px-5 py-5 bg-[#f5f5f5]">
+    <section className="w-full h-full px-5 py-5 bg-[#f5f5f5]">
       <div className="w-full bg-white rounded-lg shadow-md p-4 mb-4 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex flex-col md:flex-row items-center md:items-center justify-between w-full gap-3">
           <div className="text-center md:text-left">
@@ -317,7 +325,7 @@ export default function Inventory() {
               Manage inventory, add/edit inventory
             </p>
           </div>
-          <div className="h-full flex flex-wrap gap-3 items-center justify-center md:justify-start w-full md:w-auto">
+          <div className=" flex flex-wrap gap-3 items-center justify-center md:justify-start w-full md:w-auto ">
             <button
               onClick={() => {
                 setEditingRow({ name: "", category: "" });
@@ -333,7 +341,10 @@ export default function Inventory() {
             >
               Add Category
             </button>
-            <button className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center flex-shrink-0">
+            <button
+              className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center flex-shrink-0"
+              onClick={exportPdf}
+            >
               <i className="bi bi-file-earmark-pdf pr-1"></i>
               Export pdf
             </button>
@@ -350,7 +361,7 @@ export default function Inventory() {
           )
         ) : (
           <>
-            <div className="w-full p-5 bg-[#F9FAFB] mb-3 rounded-sm border-1 border-[#e6e6e6] flex justify-end">
+            <div className="w-full p-5 bg-[#F9FAFB] mb-3 rounded-sm border-1 border-[#e6e6e6] flex md:justify-end justify-center">
               <div className="relative ">
                 <input
                   value={globalFilterValue}
@@ -366,9 +377,9 @@ export default function Inventory() {
             <DataTable
               value={categoryData.categories || []}
               dataKey="id"
-              alwaysShowPaginator={false}
+              alwaysShowPaginator={true}
               paginatorClassName="mt-3"
-              paginator={categoryData?.categories?.length > 5}
+              paginator={categoryData?.categories?.length > 5 || rows > 5}
               rowsPerPageOptions={[5, 10, 20, 50]}
               rows={rows}
               first={first}
@@ -387,7 +398,7 @@ export default function Inventory() {
                     : "40rem",
                 tableLayout: "fixed",
               }}
-              className="min-h-full h-[72vh] overflow-auto !text-[14px] !font-[poppins] "
+              className=" overflow-auto !text-[14px] !font-[poppins] "
             >
               <Column
                 header="S.No"
@@ -716,11 +727,11 @@ export default function Inventory() {
                 <Column
                   rowEditor
                   style={{
-                    width: "20%",
+                    width: "3.5rem",
                     textAlign: "center",
                   }}
                   headerClassName="text-left"
-                  bodyClassName="text-left"
+                  bodyClassName="text-left  "
                 />
                 <Column
                   header="Actions"
@@ -754,6 +765,7 @@ export default function Inventory() {
                   style={{
                     textAlign: "center",
                   }}
+                  className="uppercase"
                 />
               </DataTable>
             </>
@@ -790,12 +802,11 @@ export default function Inventory() {
                 rows={10}
                 first={first}
                 removableSort
-                size="small"
                 editMode="row"
                 stripedRows
-                rowEditorInitIcon="bi bi-pencil cursor-pointer text-blue-500 p-2 rounded bg-blue-100"
-                rowEditorSaveIcon="bi bi-check-lg cursor-pointer text-green-600 p-2 rounded bg-green-100"
-                rowEditorCancelIcon="bi bi-x-lg cursor-pointer text-red-500 p-2 rounded bg-red-100"
+                rowEditorInitIcon="bi bi-pencil cursor-pointer text-blue-500 p-2 bg-blue-100"
+                rowEditorSaveIcon="bi bi-check-lg cursor-pointer text-green-600 p-2 rounded-md bg-green-100"
+                rowEditorCancelIcon="bi bi-x-lg cursor-pointer text-red-500 p-2 rounded-md  bg-red-100"
                 onPage={onPage}
                 filters={filters}
                 emptyMessage="No products listed yet...."
@@ -816,7 +827,7 @@ export default function Inventory() {
                 <Column
                   rowEditor
                   style={{
-                    width: "13%",
+                    width: "7%",
                     textAlign: "center",
                   }}
                 />
@@ -843,6 +854,7 @@ export default function Inventory() {
                   header="Name"
                   editor={(options) => textEditor(options)}
                   headerClassName="font-[poppins]"
+                  className="uppercase"
                   alignHeader={"center"}
                   style={{
                     width: "20%",

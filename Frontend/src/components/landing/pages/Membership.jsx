@@ -10,7 +10,7 @@ import { ConfirmDialog, confirmDialog } from "primereact/confirmdialog";
 import { Dialog } from "primereact/dialog";
 import { FilterMatchMode } from "primereact/api";
 import { useQuery, useMutation } from "@apollo/client/react";
-import { GET_MEMEBRSHIPS } from "../../graphql/queries";
+import { GET_MEMBERSHIPS } from "../../graphql/queries";
 import {
   ADD_MEMBERSHIP,
   DELETE_MEMBERSHIP,
@@ -19,7 +19,7 @@ import {
 
 export default function Membership() {
   //queries
-  const { data, loading, error } = useQuery(GET_MEMEBRSHIPS);
+  const { data, loading, error } = useQuery(GET_MEMBERSHIPS);
 
   //mutations
   const [addMembership] = useMutation(ADD_MEMBERSHIP);
@@ -226,7 +226,7 @@ export default function Membership() {
           )
         ) : (
           <>
-            <div className="w-full p-5 bg-[#F9FAFB] mb-3 rounded-sm border-1 border-[#e6e6e6] flex justify-between">
+            <div className="w-full p-5 bg-[#F9FAFB] mb-3 rounded-sm border-1 border-[#e6e6e6] flex md:justify-end justify-center">
               <div className="opacity-0 ">o</div>
               <div className="relative ">
                 <input
@@ -248,15 +248,14 @@ export default function Membership() {
               rowsPerPageOptions={[5, 10, 20, 50]}
               rows={rows}
               first={first}
-              removableSort 
-              size="small"
+              removableSort
               stripedRows
               onPage={onPage} //for when adding new coloumn new added will be listed at last
               filters={filters}
               globalFilterFields={["name", "mobileNumber", "address"]}
               emptyMessage="No Membership found."
               tableStyle={{ minWidth: "70rem", tableLayout: "fixed" }}
-              className="min-h-full h-[72vh] overflow-auto !text-[14px] !font-[poppins]"
+              className=" overflow-auto !text-[14px] !font-[poppins]"
             >
               <Column
                 header="S.No"
@@ -283,9 +282,7 @@ export default function Membership() {
                     >
                       <i className="bi bi-pencil  cursor-pointer text-blue-500 p-2 rounded bg-blue-100"></i>
                     </button>
-                    <button
-                      onClick={() => confirmDelete(rowData)}
-                    >
+                    <button onClick={() => confirmDelete(rowData)}>
                       <i className="bi bi-trash  cursor-pointer text-red-500 p-2 rounded bg-red-100"></i>
                     </button>
                   </div>

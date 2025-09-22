@@ -413,7 +413,7 @@ export default function InventoryLending() {
           )
         ) : (
           <>
-            <div className="w-full p-5 bg-[#F9FAFB] mb-3 rounded-sm border-1 border-[#e6e6e6] flex justify-end">
+            <div className="w-full p-5 bg-[#F9FAFB] mb-3 rounded-sm border-1 border-[#e6e6e6] flex md:justify-end justify-center">
               <div className="relative ">
                 <input
                   value={globalFilterValue}
@@ -435,7 +435,6 @@ export default function InventoryLending() {
               rowsPerPageOptions={[5, 10, 20, 50]}
               rows={rows}
               removableSort
-              size="small"
               stripedRows
               first={first}
               onPage={onPage}
@@ -449,7 +448,7 @@ export default function InventoryLending() {
               ]}
               emptyMessage="No Records found."
               tableStyle={{ minWidth: "70rem", tableLayout: "fixed" }}
-              className="min-h-full w-full h-[72vh] overflow-auto !text-[14px] !font-[poppins]"
+              className=" w-full  overflow-auto !text-[14px] !font-[poppins]"
             >
               <Column
                 header="S.No"
@@ -482,9 +481,13 @@ export default function InventoryLending() {
                     >
                       <i className="bi bi-pencil  cursor-pointer text-blue-500 p-2 rounded bg-blue-100"></i>
                     </button>
-                    <button onClick={() => confirmDelete(rowData)}>
-                      <i className="bi bi-trash  cursor-pointer text-red-500 p-2 rounded bg-red-100"></i>
-                    </button>
+                    {rowData.status ? (
+                      <button onClick={() => confirmDelete(rowData)}>
+                        <i className="bi bi-trash  cursor-pointer text-red-500 p-2 rounded bg-red-100"></i>
+                      </button>
+                    ) : (
+                      ""
+                    )}
                     {rowData.status ? (
                       ""
                     ) : (
@@ -499,7 +502,7 @@ export default function InventoryLending() {
                 )}
                 alignHeader={"center"}
                 style={{
-                  width: "10%",
+                  // width: "10%",
                   textAlign: "center",
                 }}
               />

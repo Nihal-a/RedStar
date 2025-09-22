@@ -9,6 +9,6 @@ from django.conf.urls.static import static
 
 urlpatterns = [ 
     path('admin/', admin.site.urls),
-    # path('', include('Redstar.urls')),
+    path('', include('Redstar.urls')),
     path("graphql/", csrf_exempt(FileUploadGraphQLView.as_view(graphiql=True))),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

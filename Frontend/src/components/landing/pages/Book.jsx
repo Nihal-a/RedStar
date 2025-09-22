@@ -12,9 +12,11 @@ import { Dialog } from "primereact/dialog";
 import { FilterMatchMode } from "primereact/api";
 import { useQuery, useMutation } from "@apollo/client/react";
 import { CREATE_BOOK, DELETE_BOOK, UPDATE_BOOK } from "../../graphql/mutations";
-import { GET_BOOKS } from "../../graphql/queries";
+import { GET_BOOKS, PRINT_PDF } from "../../graphql/queries";
+import { useNavigate } from "react-router-dom";
 
 export default function Book() {
+  const puppeteer = require("puppeteer");
   //graphql
   const { data, loading, error, refetch } = useQuery(GET_BOOKS);
 
@@ -30,6 +32,7 @@ export default function Book() {
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [first, setFirst] = useState(0);
   const [rows, setRows] = useState(5);
+  const navigate = useNavigate();
 
   //modal
   const [visible, setVisible] = useState(false);
@@ -201,6 +204,17 @@ export default function Book() {
     setRows(e.rows);
   };
 
+  const handlePrintPdf = async () => {
+    const browser = await puppeteer.launch({ headless: true });
+    const page = await browser.newPage();
+    await page.goto("http://localhost:5173/printpdf/books", {
+      waitUntil: "networkidle0",
+    });
+    const pdfBuffer = await page.pdf({ format: "A4", printBackground: true });
+    await browser.close();
+    return pdfBuffer;
+  };
+
   return (
     <section className="w-full min-h-screen px-5 py-5 bg-[#f5f5f5]">
       <Toast ref={toast} />
@@ -222,8 +236,11 @@ export default function Book() {
             >
               Add Book
             </button>
-            <button className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center cursor-pointer">
-              <i class="bi bi-file-earmark-pdf pr-1 "></i>
+            <button
+              className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center cursor-pointer"
+              onClick={handlePrintPdf}
+            >
+              <i className="bi bi-file-earmark-pdf pr-1 "></i>
               Export pdf
             </button>
           </div>
@@ -238,7 +255,7 @@ export default function Book() {
           )
         ) : (
           <>
-            <div className="w-full p-5 bg-[#F9FAFB] mb-3 rounded-sm border-1 border-[#e6e6e6] flex justify-between">
+            <div className="w-full p-5 bg-[#F9FAFB] mb-3 rounded-sm border-1 border-[#e6e6e6] flex md:justify-end justify-center">
               <div className="opacity-0 ">o</div>
               <div className="relative ">
                 <input
@@ -263,14 +280,13 @@ export default function Book() {
               alwaysShowPaginator={true}
               first={first}
               removableSort
-              size="small"
               stripedRows
               onPage={onPage} //for when adding new coloumn new added will be listed at last
               filters={filters}
               globalFilterFields={["name", "category", "author"]}
               emptyMessage="No books found."
               tableStyle={{ minWidth: "70rem", tableLayout: "fixed" }}
-              className="min-h-full h-[72vh] overflow-auto !text-[14px] !font-[poppins]"
+              className=" overflow-auto !text-[14px] !font-[poppins]"
             >
               <Column
                 header="S.No"

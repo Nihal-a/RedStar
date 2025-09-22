@@ -14,7 +14,7 @@ import { useQuery, useMutation } from "@apollo/client/react";
 import {
   GET_BOOK_LENDING,
   GET_BOOKS,
-  GET_MEMEBRSHIPS,
+  GET_MEMBERSHIPS,
 } from "../../graphql/queries";
 import { format, addMonths } from "date-fns";
 import {
@@ -23,6 +23,7 @@ import {
   RETURN_BOOK_LENDING,
   UPDATE_BOOK_LENDING,
 } from "../../graphql/mutations";
+import { useNavigate } from "react-router-dom";
 
 export default function BookLending() {
   //queries
@@ -39,7 +40,7 @@ export default function BookLending() {
     loading: memberLoading,
     error: memberError,
     refetch: memberRefetch,
-  } = useQuery(GET_MEMEBRSHIPS);
+  } = useQuery(GET_MEMBERSHIPS);
 
   //mutations
 
@@ -56,6 +57,7 @@ export default function BookLending() {
   const [first, setFirst] = useState(0);
   const [rows, setRows] = useState(8);
 
+  const navigate = useNavigate();
   // Modal states
   const [visible, setVisible] = useState(false);
   const [editingRow, setEditingRow] = useState(null);
@@ -276,7 +278,6 @@ export default function BookLending() {
     setFirst(e.first);
     setRows(e.rows);
   };
-  console.log(bookData);
   return (
     <section className="w-full min-h-screen px-5 py-5 bg-[#f5f5f5]">
       <div className="w-full  bg-white rounded-lg shadow-md p-4 mb-4 flex  items-center justify-between ">
@@ -297,7 +298,14 @@ export default function BookLending() {
               Add Record
             </button>
             <button
-              // onClick={exportPDF}
+              onClick={() =>
+                navigate("/printpdf/book_lending", {
+                  state: {
+                    data: loading ? [] : data.books,
+                    head: "Book Lending Report",
+                  },
+                })
+              }
               className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center cursor-pointer"
             >
               <i class="bi bi-file-earmark-pdf pr-1 "></i>
@@ -316,7 +324,7 @@ export default function BookLending() {
           )
         ) : (
           <>
-            <div className="w-full p-5 bg-[#F9FAFB] mb-3 rounded-sm border-1 border-[#e6e6e6] flex justify-between">
+            <div className="w-full p-5 bg-[#F9FAFB] mb-3 rounded-sm border-1 border-[#e6e6e6] flex md:justify-end justify-center">
               <div className="opacity-0 ">o</div>
               <div className="relative ">
                 <input
@@ -338,7 +346,7 @@ export default function BookLending() {
               paginator={data.bookLending?.length > 5}
               rowsPerPageOptions={[5, 10, 20, 50]}
               removableSort
-              size="small"
+              size="normal"
               stripedRows
               first={first}
               onPage={onPage} //for when adding new coloumn new added will be listed at last
@@ -352,7 +360,7 @@ export default function BookLending() {
               ]}
               emptyMessage="No Records found."
               tableStyle={{ minWidth: "70rem", tableLayout: "fixed" }}
-              className="min-h-full w-full h-[72vh] overflow-auto !text-[14px] !font-[poppins]"
+              className=" w-full  overflow-auto !text-[14px] !font-[poppins] "
             >
               <Column
                 header="S.No"
@@ -379,13 +387,16 @@ export default function BookLending() {
                     >
                       <i className="bi bi-pencil  cursor-pointer text-blue-500 p-2 rounded bg-blue-100"></i>
                     </button>
-                    <button
-                      className=" "
-                      onClick={() => confirmDelete(rowData)}
-                    >
-                      <i className="bi bi-trash  cursor-pointer text-red-500 p-2 rounded bg-red-100"></i>
-                    </button>
-
+                    {rowData.status ? (
+                      <button
+                        className=" "
+                        onClick={() => confirmDelete(rowData)}
+                      >
+                        <i className="bi bi-trash  cursor-pointer text-red-500 p-2 rounded bg-red-100"></i>
+                      </button>
+                    ) : (
+                      ""
+                    )}
                     {rowData.status ? (
                       ""
                     ) : (
@@ -606,7 +617,6 @@ export default function BookLending() {
                     setEditingRow({ ...editingRow, book: e.value || "" });
                   }}
                   placeholder="Select book..."
-                 
                   className="w-full  [&_.p-dropdown-label]:!p-1.5 "
                 />
               )}

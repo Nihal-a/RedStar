@@ -52,7 +52,7 @@ const Sidebar = ({ selectedMenu, onMenuChange }) => {
           selected={selectedMenu === "MEMBERSHIP"}
           onClick={() => onMenuChange("MEMBERSHIP")}
         />
-        <SidebarItem
+        {/* <SidebarItem
           label="FINANCE"
           icon="bi-graph-up"
           selected={selectedMenu === "FINANCE"}
@@ -69,7 +69,7 @@ const Sidebar = ({ selectedMenu, onMenuChange }) => {
           icon="bi-trash3"
           selected={selectedMenu === "BIN"}
           onClick={() => onMenuChange("BIN")}
-        />
+        /> */}
       </div>
     </section>
   );

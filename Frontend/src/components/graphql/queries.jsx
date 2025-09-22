@@ -1,5 +1,13 @@
 import { gql } from "@apollo/client";
 
+export const PRINT_PDF = gql`
+  query printPdf {
+    printPdf(path: "http://localhost:5173/printpdf/books") {
+      url
+    }
+  }
+`;
+
 export const COUNT = gql`
   query GetCounts {
     counts {
@@ -67,7 +75,7 @@ export const GET_INVENTORY_LENDING = gql`
   }
 `;
 
-export const GET_MEMEBRSHIPS = gql`
+export const GET_MEMBERSHIPS = gql`
   query GetMemberships {
     memberships {
       id

@@ -2,50 +2,28 @@ import React, { useEffect, useState } from "react";
 import { COUNT } from "../../graphql/queries";
 import { useQuery } from "@apollo/client/react";
 import DashboardCard from "../../utils/dashboardCard";
-import { Sidebar } from "primereact/sidebar";
 import { Button } from "primereact/button";
 import CustomSidebar from "../Sidebar";
 import SidebarItem from "../../utils/SidebarItem";
 
 const Dashboard = ({ selectedMenu, onMenuChange }) => {
   const { data, loading, error, refetch } = useQuery(COUNT);
-  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     refetch();
   }, [refetch]);
 
   return (
-    <section className="w-full h-full lg:px-5 px-3.5 lg:py-5 py-3 bg-[#f5f5f5] flex flex-col">
+    <section className="w-full h-full lg:px-5 px-3.5 lg:py-5 py-3 bg-[#f5f5f5] flex flex-col ">
       {/* Top Bar */}
       <div className="w-full bg-white rounded-lg shadow-md p-6 flex items-center justify-between">
         <p className="font-[poppins] font-bold md:text-[22px] text-[16px]">
           DASHBOARD
         </p>
-
-        <div className="md:hidden">
-          <Button
-            icon="pi pi-bars"
-            className="p-button-text"
-            onClick={() => setVisible(true)}
-          />
-        </div>
       </div>
 
-      <Sidebar
-        visible={visible}
-        onHide={() => setVisible(false)}
-        position="left"
-        style={{ width: "250px", padding: 0 }}
-      >
-        <CustomSidebar
-          selectedMenu={selectedMenu}
-          onMenuChange={onMenuChange}
-        />
-      </Sidebar>
-
       {/* Dashboard Cards */}
-      <div className="bg-white rounded-lg shadow-md p-4 w-full grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 mt-4">
+      <div className=" rounded-lg  p-4 w-full grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3  mt-3 ">
         {loading || error ? (
           loading ? (
             <p>Loading dashboard...</p>
