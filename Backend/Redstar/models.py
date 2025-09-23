@@ -28,13 +28,13 @@ class CustomUserManager(BaseUserManager):
     
     
     def create_superuser(self, username, password=None, **extra_fields):
-        extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
         return self.create_user( username, password, **extra_fields)
 
     
 class User(AbstractBaseUser,PermissionsMixin):
     username=models.CharField( max_length=50, unique=True,null=True,blank=True)
+    token =models.TextField(max_length=50,null=True,blank=True)
 
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = []

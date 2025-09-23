@@ -1,11 +1,13 @@
 import React from "react";
-import { useState } from "react";
-import book from "../../assets/book.svg";
 import redstar_full from "../../assets/redstar_full.svg";
 import redstar_logo from "../../assets/redstar_logo.svg";
 import SidebarItem from "../utils/SidebarItem";
+import { useMutation } from "@apollo/client/react";
+import { gql } from "@apollo/client";
+
 
 const Sidebar = ({ selectedMenu, onMenuChange }) => {
+
   return (
     <section className=" h-full flex flex-col shadow-lg">
       <div
@@ -52,6 +54,13 @@ const Sidebar = ({ selectedMenu, onMenuChange }) => {
           selected={selectedMenu === "MEMBERSHIP"}
           onClick={() => onMenuChange("MEMBERSHIP")}
         />
+        <div
+          // onClick={handleLogout}
+          className="w-full flex items-center justify-start p-4 gap-4 cursor-pointer rounded-sm m-1 font-[poppins] hover:border-l-4 border-[#e01514] "
+        >
+          <i className={`bi-box-arrow-left text-[18px] `}></i>
+          <p className=" font-[poppins] text-[14px] ">LOGOUT</p>
+        </div>
         {/* <SidebarItem
           label="FINANCE"
           icon="bi-graph-up"

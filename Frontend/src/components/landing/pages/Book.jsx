@@ -12,11 +12,10 @@ import { Dialog } from "primereact/dialog";
 import { FilterMatchMode } from "primereact/api";
 import { useQuery, useMutation } from "@apollo/client/react";
 import { CREATE_BOOK, DELETE_BOOK, UPDATE_BOOK } from "../../graphql/mutations";
-import { GET_BOOKS, PRINT_PDF } from "../../graphql/queries";
+import { GET_BOOKS } from "../../graphql/queries";
 import { useNavigate } from "react-router-dom";
 
 export default function Book() {
-  const puppeteer = require("puppeteer");
   //graphql
   const { data, loading, error, refetch } = useQuery(GET_BOOKS);
 
@@ -204,17 +203,6 @@ export default function Book() {
     setRows(e.rows);
   };
 
-  const handlePrintPdf = async () => {
-    const browser = await puppeteer.launch({ headless: true });
-    const page = await browser.newPage();
-    await page.goto("http://localhost:5173/printpdf/books", {
-      waitUntil: "networkidle0",
-    });
-    const pdfBuffer = await page.pdf({ format: "A4", printBackground: true });
-    await browser.close();
-    return pdfBuffer;
-  };
-
   return (
     <section className="w-full min-h-screen px-5 py-5 bg-[#f5f5f5]">
       <Toast ref={toast} />
@@ -238,7 +226,7 @@ export default function Book() {
             </button>
             <button
               className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center cursor-pointer"
-              onClick={handlePrintPdf}
+              // onClick={handlePrintPdf}
             >
               <i className="bi bi-file-earmark-pdf pr-1 "></i>
               Export pdf

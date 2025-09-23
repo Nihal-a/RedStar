@@ -1,20 +1,12 @@
-import tempfile
-from django.http import HttpResponse
+
 import graphene
-import os,base64
 from graphql import GraphQLError
 from graphene_django.types import DjangoObjectType
 from .models import *
-from graphene_file_upload.scalars import Upload
-from django.conf import settings
 from datetime import datetime
-from django.db.models import F,Sum
-from weasyprint import HTML
-from graphene import Field
-from django.core.files.base import ContentFile
-from django.core.files.storage import default_storage
-os.environ["G_MESSAGES_DEBUG"] = "none"
-
+from django.db.models import F,Sum 
+import graphql_jwt
+from graphql_jwt.decorators import login_required
 
 # membershipId Generator function
 def MembershipIdGenerator(last_id=None):
@@ -36,12 +28,19 @@ def MembershipIdGenerator(last_id=None):
     serial_str = str(new_serial).zfill(4)
     return f"{prefix}{date_code}-{serial_str}"
 
+# -----------------------------------------------------------------------------------------------------------------------------------------------------------------
+# ------------------------------------QUERIES----------------------------------------------------------------------------------------------------------------------
 
+class UserType(DjangoObjectType):
+    class Meta:
+        model = User
+        fields = ("id", "username")
 
 class InventoryType(DjangoObjectType):
     class Meta:
         model = Inventory
         fields = ("id", "name", "category", "status")
+
 class CategoryType(DjangoObjectType):
     class Meta:
         model = Category
@@ -60,12 +59,10 @@ class InventoryLendingType(DjangoObjectType):
         model = InventoryLending
         fields = ("id", "name", "mobileNumber", "inventory", "address", "lendedDate", "returnDate", "remarks", "status")
 
-
 class MembershipsType(DjangoObjectType):
     class Meta:
         model = Memberships
         fields = ("id", "membershipId", "name", "profile", "mobileNumber",  "address",  "status")
-
 
 class BookType(DjangoObjectType):
     class Meta:
@@ -77,8 +74,6 @@ class BookLendingType(DjangoObjectType):
         model = BooksLending
         fields = ("id", "member", "book", "lendedDate", "returnDate", "remarks", "status")
 
-
-
 class CountsType(graphene.ObjectType):
     inventories = graphene.Int()
     issuedInvCurrently = graphene.Int()
@@ -88,10 +83,6 @@ class CountsType(graphene.ObjectType):
     issuedBooksTill = graphene.Int()
     categories = graphene.Int()
     memberships = graphene.Int()
-
-
-class PrintPdf(graphene.ObjectType):
-    url = graphene.String()
     
 
 class Query(graphene.ObjectType):
@@ -102,23 +93,6 @@ class Query(graphene.ObjectType):
     counts = graphene.Field(CountsType)
     memberships = graphene.List(MembershipsType)
     book_lending = graphene.List(BookLendingType)
-    printPdf = Field(PrintPdf, path=graphene.String(required=True))
-
-    def resolve_printPdf(root, info, path):
-        print(path)
-        print("2222222222222222222222222222")
-        # print("00000000000000000000000000000000000000000000000000000000"+html_string)
-        html = HTML(url=path)
-        print(html)
-        pdf = html.write_pdf()
-
-        fileName = f"report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
-        filePath = default_storage.save(f"reports/{fileName}", tempfile.NamedTemporaryFile())
-        with default_storage.open(filePath, 'wb') as f:
-            f.write(pdf)
-        
-        return PrintPdf(url=default_storage.url(filePath))
-
 
     def resolve_categories(root, info):
         return Category.objects.all().order_by("name")
@@ -151,7 +125,14 @@ class Query(graphene.ObjectType):
             "memberships" :Memberships.objects.count(),
             "categories": Category.objects.count(),
         }
+    
+
+
 schema = graphene.Schema(query=Query)
+
+
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# ------------------------------------MUTATIONS----------------------------------------------------------------------------------------------------------------------
 
 
 
@@ -170,6 +151,7 @@ class CreateInventory(graphene.Mutation):
     
         inventory = Inventory.objects.create(name=name, category=category_obj,  )
         return CreateInventory(inventory=inventory)
+    
 class UpdateInventory(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
@@ -605,6 +587,10 @@ class DeleteBookLending(graphene.Mutation):
             raise Exception("Lending record not found.")
 
 class Mutation(graphene.ObjectType):
+
+    token_auth = graphql_jwt.ObtainJSONWebToken.Field()
+    verify_token = graphql_jwt.Verify.Field()
+    refresh_token = graphql_jwt.Refresh.Field()
 
     create_inventory = CreateInventory.Field()
     update_inventory = UpdateInventory.Field()

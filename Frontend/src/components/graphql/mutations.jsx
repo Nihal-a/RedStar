@@ -1,5 +1,37 @@
 import { gql } from "@apollo/client";
 
+//-------------------------CATEGORY MANAGMENT-----------------------------------------------------------------------------------------------------------------
+export const LOGIN_MUTATION = gql`
+  mutation TokenAuth($username: String!, $password: String!) {
+    tokenAuth(username: $username, password: $password) {
+      token
+      payload
+      refreshExpiresIn
+    }
+  }
+`;
+
+export const VERIFY_MUTATION = gql`
+  mutation VerifyToken($token: String!) {
+    verifyToken(token: $token) {
+      payload {
+        exp
+        username
+      }
+    }
+  }
+`;
+
+export const REFRESH_MUTATION = gql`
+  mutation RefreshToken {
+    refreshToken {
+      token
+      payload {
+        exp
+      }
+    }
+  }
+`;
 
 //-------------------------CATEGORY MANAGMENT-----------------------------------------------------------------------------------------------------------------
 export const CREATE_CATEGORY = gql`

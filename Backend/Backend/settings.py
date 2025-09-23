@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
     'Redstar',
     'corsheaders',
     'graphene_django',
@@ -43,6 +44,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+
 
 ROOT_URLCONF = 'Backend.urls'
 
@@ -63,9 +66,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'Backend.wsgi.application'
 
-GRAPHENE = {
-    "SCHEMA": "Redstar.schema.schema",
-}
 
 
 # Database
@@ -84,9 +84,21 @@ DATABASES = {
 }
 
 AUTH_USER_MODEL = 'Redstar.User'
+GRAPHENE = {
+    "SCHEMA": "Redstar.schema.schema",
+    "MIDDLEWARE": [
+        "graphql_jwt.middleware.JSONWebTokenMiddleware",
+    ],
+}
 AUTHENTICATION_BACKENDS = [
+    'graphql_jwt.backends.JSONWebTokenBackend',
     'django.contrib.auth.backends.ModelBackend',
 ]
+
+SESSION_ENGINE = "django.contrib.sessions.backends.db"  # default
+SESSION_COOKIE_NAME = "sessionid"
+SESSION_COOKIE_SECURE = False
+
 
 CORS_ALLOW_ALL_ORIGINS = True  #development purpose only, use with caution in production
 CORS_ALLOW_CREDENTIALS = True

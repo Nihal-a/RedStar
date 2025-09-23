@@ -210,7 +210,7 @@ export default function Membership() {
               // onClick={exportPDF}
               className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center cursor-pointer"
             >
-              <i class="bi bi-file-earmark-pdf pr-1 "></i>
+              <i className="bi bi-file-earmark-pdf pr-1 "></i>
               Export pdf
             </button>
           </div>

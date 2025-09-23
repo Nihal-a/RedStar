@@ -1,5 +1,14 @@
 import { gql } from "@apollo/client";
 
+export const ME = gql`
+  query {
+    me {
+      id
+      username
+    }
+  }
+`;
+
 export const PRINT_PDF = gql`
   query printPdf {
     printPdf(path: "http://localhost:5173/printpdf/books") {
