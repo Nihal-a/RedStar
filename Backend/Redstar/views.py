@@ -1,25 +1,18 @@
+# from django.http import JsonResponse
+# from graphql_jwt.utils import jwt_encode, jwt_decode
+# from graphql_jwt.exceptions import JSONWebTokenError
 
-import json
-from django.http import HttpResponse
-from django.template.loader import render_to_string
-from weasyprint import HTML
+# def refresh_access_token(request):
+#     refresh = request.COOKIES.get("refresh_token")
+#     if not refresh:
+#         return JsonResponse({"error": "No refresh token"}, status=401)
 
-def resolve_printPdf(request):
-    try:
-        print("111111111")
-        data = json.loads(request.body)
-        html = data.get('html', '')
-        print(html)
-        # html_string = request.build_absolute_uri("http://localhost:8000/printpdf/" + path)
-        # print(html_string)
-        html_ = HTML(string= html)
-        print(html_)
-        pdf = html_.write_pdf()
+#     try:
+#         # Decode the refresh token first (optional check)
+#         payload = jwt_decode(refresh)
 
-        response = HttpResponse(pdf, content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="name.pdf"'
-        return response
-    except Exception as e:
-        print(f"Error building absolute URI: {e}")
-        return HttpResponse("Error generating PDF", status=500)
-    
+#         # Generate new access token
+#         new_token = jwt_encode(payload)
+#         return JsonResponse({"access_token": new_token})
+#     except JSONWebTokenError:
+#         return JsonResponse({"error": "Invalid refresh token"}, status=401)

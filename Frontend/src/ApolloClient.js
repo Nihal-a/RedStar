@@ -7,6 +7,7 @@ import {
 
 const httpLink = new HttpLink({
   uri: "http://192.168.18.144:8000/graphql/",
+  credentials: "include",
 });
 
 const authLink = new ApolloLink((operation, forward) => {

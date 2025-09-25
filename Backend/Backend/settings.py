@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 import environ
-
+from datetime import timedelta
 
 
 env = environ.Env() 
@@ -27,10 +27,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
     'Redstar',
     'corsheaders',
     'graphene_django',
+    'graphql_auth',
+    'graphql_jwt.refresh_token.apps.RefreshTokenConfig',
     'graphene_file_upload',
 ]
 
@@ -84,28 +85,41 @@ DATABASES = {
 }
 
 AUTH_USER_MODEL = 'Redstar.User'
+
+AUTHENTICATION_BACKENDS = [
+    "graphql_jwt.backends.JSONWebTokenBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+
 GRAPHENE = {
     "SCHEMA": "Redstar.schema.schema",
     "MIDDLEWARE": [
         "graphql_jwt.middleware.JSONWebTokenMiddleware",
     ],
 }
-AUTHENTICATION_BACKENDS = [
-    'graphql_jwt.backends.JSONWebTokenBackend',
-    'django.contrib.auth.backends.ModelBackend',
-]
 
-SESSION_ENGINE = "django.contrib.sessions.backends.db"  # default
-SESSION_COOKIE_NAME = "sessionid"
-SESSION_COOKIE_SECURE = False
+
+GRAPHQL_JWT = {
+    "JWT_VERIFY_EXPIRATION": True,
+    "JWT_LONG_RUNNING_REFRESH_TOKEN": True,
+    "JWT_EXPIRATION_DELTA": timedelta(minutes=1),
+    "JWT_REFRESH_EXPIRATION_DELTA": timedelta(days=7),
+    "JWT_REFRESH_COOKIE": True,               # ✅ store refresh token in HttpOnly cookie
+    "JWT_REFRESH_TOKEN_COOKIE_NAME": "JWT",   # optional
+    "JWT_COOKIE_SAMESITE": "Lax",
+    "JWT_COOKIE_SECURE": False,               # False for dev
+}
+
 
 
 CORS_ALLOW_ALL_ORIGINS = True  #development purpose only, use with caution in production
-CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',
     'http://192.168.18.144:5173', 
 ]
+
+# CORS_EXPOSE_HEADERS=["Content-Type","X-CSRFToken","Authorization"]
+CORS_ALLOW_CREDENTIALS = True
 
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",

@@ -53,6 +53,7 @@ export default function Book() {
         )}`
       );
       const data = await res.json();
+      console.log(data);
       if (data.items) {
         const mapped = data.items.map((item) => {
           const info = item.volumeInfo;

@@ -87,7 +87,7 @@ export default function Membership() {
             address: editingRow.address,
             mobileNumber: editingRow.mobileNumber,
           },
-          refetchQueries: [{ query: GET_MEMEBRSHIPS }],
+          refetchQueries: [{ query: GET_MEMBERSHIPS }],
           awaitRefetchQueries: true,
         });
         setVisible(false);
@@ -112,7 +112,7 @@ export default function Membership() {
             id: editingRow.id,
             ...updates,
           },
-          refetchQueries: [{ query: GET_MEMEBRSHIPS }],
+          refetchQueries: [{ query: GET_MEMBERSHIPS }],
           awaitRefetchQueries: true,
         });
 
@@ -150,7 +150,7 @@ export default function Membership() {
         try {
           await DeleteMembership({
             variables: { id: rowData.id },
-            refetchQueries: [{ query: GET_MEMEBRSHIPS }],
+            refetchQueries: [{ query: GET_MEMBERSHIPS }],
             awaitRefetchQueries: true,
           });
 

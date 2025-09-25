@@ -7,6 +7,7 @@ from datetime import datetime
 from django.db.models import F,Sum 
 import graphql_jwt
 from graphql_jwt.decorators import login_required
+from django.contrib.auth import get_user_model
 
 # membershipId Generator function
 def MembershipIdGenerator(last_id=None):
@@ -25,12 +26,12 @@ def MembershipIdGenerator(last_id=None):
     else:
         new_serial = 1
     
-    serial_str = str(new_serial).zfill(4)
+    serial_str = str(new_serial).zfill(2)
     return f"{prefix}{date_code}-{serial_str}"
 
 # -----------------------------------------------------------------------------------------------------------------------------------------------------------------
 # ------------------------------------QUERIES----------------------------------------------------------------------------------------------------------------------
-
+User = get_user_model()
 class UserType(DjangoObjectType):
     class Meta:
         model = User
@@ -93,6 +94,14 @@ class Query(graphene.ObjectType):
     counts = graphene.Field(CountsType)
     memberships = graphene.List(MembershipsType)
     book_lending = graphene.List(BookLendingType)
+    user = graphene.List(UserType)
+
+    @login_required
+    def resolve_user(root, info, **kwargs):
+        user = info.context.user
+        if not user.is_authenticated:
+            raise Exception("Authenticaton denied.") 
+        return User.objects.all()
 
     def resolve_categories(root, info):
         return Category.objects.all().order_by("name")
@@ -586,11 +595,13 @@ class DeleteBookLending(graphene.Mutation):
         except BooksLending.DoesNotExist:
             raise Exception("Lending record not found.")
 
+
 class Mutation(graphene.ObjectType):
 
     token_auth = graphql_jwt.ObtainJSONWebToken.Field()
     verify_token = graphql_jwt.Verify.Field()
     refresh_token = graphql_jwt.Refresh.Field()
+    delete_token_cookie = graphql_jwt.DeleteJSONWebTokenCookie.Field()
 
     create_inventory = CreateInventory.Field()
     update_inventory = UpdateInventory.Field()

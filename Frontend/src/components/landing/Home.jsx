@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Sidebar_ from "./Sidebar";
 import Dashboard from "./pages/Dashboard";
 import Inventory from "./pages/Inventory";
@@ -9,15 +9,56 @@ import Finance from "./pages/Finance";
 import Reports from "./pages/Reports";
 import Bin from "./pages/Bin";
 import Membership from "./pages/Membership";
-import { Button } from "primereact/button";
-import CustomSidebar from "./Sidebar";
-import { Sidebar } from "primereact/sidebar";
-import SidebarItem from "../utils/SidebarItem";
 import redstar_logo from "../../assets/redstar_logo.svg";
+import SidebarItem from "../utils/SidebarItem";
+import { Button } from "primereact/button";
+import { Sidebar } from "primereact/sidebar";
+import { VERIFY_MUTATION } from "../graphql/mutations";
+import { useNavigate } from "react-router-dom";
+import { useMutation } from "@apollo/client/react";
 
 const Home = () => {
   const [selectedMenu, setselectedMenu] = useState("HOME");
   const [visible, setVisible] = useState(false);
+  const [access, setaccess] = useState(null);
+
+  const [verify, { loading: verifyLoading }] = useMutation(VERIFY_MUTATION);
+
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const loggedIn = localStorage.getItem("isLoggedIn") === "true";
+
+    if (!token || !loggedIn) {
+      navigate("/signin");
+    } else {
+      const token = localStorage.getItem("token");
+      setaccess(token);
+    }
+  }, []);
+
+  const handleVerify = async () => {
+    if (!access) {
+      console.log(" No access token available");
+      navigate("/signin");
+      return;
+    }
+
+    try {
+      const res = await verify({ variables: { token: access } });
+      const payload = res.data.verifyToken.payload;
+
+      console.log(
+        ` Token is valid! User: ${payload.username}, Expires: ${new Date(
+          payload.exp * 1000
+        ).toLocaleString()}`
+      );
+    } catch (err) {
+      console.error("Verify error:", err);
+      console.log(` Token verification failed: ${err.message}`);
+    }
+  };
 
   const components = {
     HOME: <Dashboard />,
@@ -30,6 +71,7 @@ const Home = () => {
     REPORTS: <Reports />,
     BIN: <Bin />,
   };
+
   return (
     <section className="w-full h-screen flex flex-col md:flex-row  overflow-hidden font-[Poppins] ">
       {/* Sidebar for mobile sized devices */}
@@ -38,7 +80,10 @@ const Home = () => {
         <Button
           icon="pi pi-bars"
           className="p-button-text"
-          onClick={() => setVisible(true)}
+          onClick={() => {
+            setVisible(true);
+            handleVerify();
+          }}
         />
       </div>
       {/* Sidebar for larger screens */}
