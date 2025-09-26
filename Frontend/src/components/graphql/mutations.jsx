@@ -1,7 +1,7 @@
 import { gql } from "@apollo/client";
 
 //-------------------------CATEGORY MANAGMENT-----------------------------------------------------------------------------------------------------------------
-// Login mutation - returns access token and sets refresh token as HTTP-only cookie
+// For auth
 export const LOGIN_MUTATION = gql`
   mutation TokenAuth($username: String!, $password: String!) {
     tokenAuth(username: $username, password: $password) {
@@ -12,7 +12,6 @@ export const LOGIN_MUTATION = gql`
   }
 `;
 
-// Verify token mutation
 export const VERIFY_MUTATION = gql`
   mutation VerifyToken($token: String!) {
     verifyToken(token: $token) {
@@ -21,18 +20,31 @@ export const VERIFY_MUTATION = gql`
   }
 `;
 
-// Refresh token mutation - uses HTTP-only cookie automatically
 export const REFRESH_MUTATION = gql`
   mutation RefreshToken {
     refreshToken {
       token
       payload
-      refreshExpiresIn
     }
   }
 `;
 
-// Revoke token mutation (for logout)
+export const DELETE_TOKEN_COOKIE_MUTATION = gql`
+  mutation DeleteTokenCookie {
+    deleteTokenCookie {
+      deleted
+    }
+  }
+`;
+
+export const DELETE_REFRESH_TOKEN_COOKIE_MUTATION = gql`
+  mutation DeleteRefreshTokenCookie {
+    deleteRefreshTokenCookie(input: {}) {
+      deleted
+    }
+  }
+`;
+
 export const REVOKE_TOKEN_MUTATION = gql`
   mutation RevokeToken {
     revokeToken {
@@ -40,8 +52,8 @@ export const REVOKE_TOKEN_MUTATION = gql`
     }
   }
 `;
-
 //-------------------------CATEGORY MANAGMENT-----------------------------------------------------------------------------------------------------------------
+
 export const CREATE_CATEGORY = gql`
   mutation CreateCategory($name: String!, $image: String) {
     createCategory(name: $name, image: $image) {

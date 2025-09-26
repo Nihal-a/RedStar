@@ -103,12 +103,25 @@ GRAPHQL_JWT = {
     "JWT_VERIFY_EXPIRATION": True,
     "JWT_LONG_RUNNING_REFRESH_TOKEN": True,
     "JWT_EXPIRATION_DELTA": timedelta(minutes=1),
-    "JWT_REFRESH_EXPIRATION_DELTA": timedelta(days=7),
-    "JWT_REFRESH_COOKIE": True,               # ✅ store refresh token in HttpOnly cookie
-    "JWT_REFRESH_TOKEN_COOKIE_NAME": "JWT",   # optional
+    "JWT_REFRESH_EXPIRATION_DELTA": timedelta(days=1),
+    "JWT_REFRESH_COOKIE": True,
+    "JWT_REFRESH_TOKEN_COOKIE_NAME": "JWT",
     "JWT_COOKIE_SAMESITE": "Lax",
-    "JWT_COOKIE_SECURE": False,               # False for dev
+    "JWT_COOKIE_SECURE": False,
+    "JWT_ALLOW_REFRESH_TOKEN_ROTATION": False,  # This should prevent new refresh tokens
+    "JWT_REUSE_REFRESH_TOKENS": True,  # Add this setting
 }
+# GRAPHQL_JWT = {
+#     "JWT_VERIFY_EXPIRATION": True,
+#     "JWT_LONG_RUNNING_REFRESH_TOKEN": True,
+#     # "JWT_REFRESH_EXPIRED_HANDLER": lambda orig_iat, context: False,
+#     "JWT_EXPIRATION_DELTA": timedelta(minutes=1),
+#     "JWT_REFRESH_EXPIRATION_DELTA": timedelta(days=1),
+#     "JWT_REFRESH_COOKIE": True,               # ✅ store refresh token in HttpOnly cookie
+#     "JWT_REFRESH_TOKEN_COOKIE_NAME": "JWT",   # optional
+#     "JWT_COOKIE_SAMESITE": "Lax",
+#     "JWT_COOKIE_SECURE": False,               # False for dev
+# }
 
 
 

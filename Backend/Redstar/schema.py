@@ -26,7 +26,7 @@ def MembershipIdGenerator(last_id=None):
     else:
         new_serial = 1
     
-    serial_str = str(new_serial).zfill(2)
+    serial_str = str(new_serial).zfill(4)
     return f"{prefix}{date_code}-{serial_str}"
 
 # -----------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -96,7 +96,6 @@ class Query(graphene.ObjectType):
     book_lending = graphene.List(BookLendingType)
     user = graphene.List(UserType)
 
-    @login_required
     def resolve_user(root, info, **kwargs):
         user = info.context.user
         if not user.is_authenticated:
@@ -602,6 +601,9 @@ class Mutation(graphene.ObjectType):
     verify_token = graphql_jwt.Verify.Field()
     refresh_token = graphql_jwt.Refresh.Field()
     delete_token_cookie = graphql_jwt.DeleteJSONWebTokenCookie.Field()
+    revoke_token = graphql_jwt.Revoke.Field()
+    delete_refresh_token_cookie = \
+        graphql_jwt.relay.DeleteRefreshTokenCookie.Field()
 
     create_inventory = CreateInventory.Field()
     update_inventory = UpdateInventory.Field()

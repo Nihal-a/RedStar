@@ -2,16 +2,11 @@ import React, { useEffect, useState } from "react";
 import { COUNT } from "../../graphql/queries";
 import { useQuery } from "@apollo/client/react";
 import DashboardCard from "../../utils/dashboardCard";
-import { Button } from "primereact/button";
-import CustomSidebar from "../Sidebar";
-import SidebarItem from "../../utils/SidebarItem";
+import { useNavigate } from "react-router-dom";
 
-const Dashboard = ({ selectedMenu, onMenuChange }) => {
+const Dashboard = () => {
+  const navigate = useNavigate();
   const { data, loading, error, refetch } = useQuery(COUNT);
-
-  useEffect(() => {
-    refetch();
-  }, [refetch]);
 
   return (
     <section className="w-full h-full lg:px-5 px-3.5 lg:py-5 py-3 bg-[#f5f5f5] flex flex-col ">
@@ -28,7 +23,7 @@ const Dashboard = ({ selectedMenu, onMenuChange }) => {
           loading ? (
             <p>Loading dashboard...</p>
           ) : (
-            <p>Error: {error.message}</p>
+            <p>Error: {error.message} </p>
           )
         ) : (
           <>

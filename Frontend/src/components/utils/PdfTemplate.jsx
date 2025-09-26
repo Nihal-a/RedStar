@@ -144,8 +144,6 @@ const PdfTemplate = () => {
     return flatRow;
   });
 
-  console.log(data);
-  console.log(rows);
   return (
     <div className="flex justify-center">
       <div className="relative w-[210mm] h-screen  text-[poppins]">

@@ -3,25 +3,24 @@ import { gql } from "@apollo/client";
 import redstar_full from "../assets/redstar_full.svg";
 import redstar_logo from "../assets/redstar_logo.svg";
 import { useNavigate } from "react-router-dom";
-import { LOGIN_MUTATION } from "./graphql/mutations";
 import { useMutation } from "@apollo/client/react";
+import { LOGIN_MUTATION } from "./graphql/mutations";
 
 const Signin = () => {
   const [username, setusername] = useState("");
   const [password, setpassword] = useState("");
 
-  const [login, { loading: loginLoading }] = useMutation(LOGIN_MUTATION);
+  const [login] = useMutation(LOGIN_MUTATION, {
+    context: { fetchOptions: { credentials: "include" } },
+  });
 
   const navigate = useNavigate();
+
   const handleLogin = async () => {
-    if (!username || !password) {
-      console.log("enter username and password");
-      return;
-    }
     try {
       const response = await login({ variables: { username, password } });
-      localStorage.setItem("token", response.data.tokenAuth.token);
-      localStorage.setItem("isLoggedIn", "true");
+      const token = response.data.tokenAuth.token;
+      localStorage.setItem("token", token);
       navigate("/");
     } catch (err) {
       alert("Login failed: " + err.message);
@@ -30,9 +29,8 @@ const Signin = () => {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    const loggedIn = localStorage.getItem("isLoggedIn") === "true";
 
-    if (token && loggedIn) {
+    if (token) {
       navigate("/");
     }
   }, []);
@@ -83,11 +81,11 @@ const Signin = () => {
               </div>
               <button
                 onClick={handleLogin}
-                disabled={loginLoading}
+                // disabled={loginLoading}
                 className="relative w-full py-1 mt-4 rounded-md ring-1 ring-[#ffffff] focus:outline-0 text-[#E01514] font-bold font-[poppins] active:bg-[#eeeeee] bg-[#ffffff] disabled:opacity-50 disabled:cursor-not-allowed  cursor-pointer"
               >
                 <p className="text-[14px] font-[poppins]">
-                  {loginLoading ? "Logging in..." : "Login"}
+                  {/* {loginLoading ? "Logging in..." : "Login"} */}LOGIN
                 </p>
               </button>
             </div>
