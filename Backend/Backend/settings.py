@@ -30,7 +30,7 @@ INSTALLED_APPS = [
     'Redstar',
     'corsheaders',
     'graphene_django',
-    'graphql_auth',
+    # 'graphql_auth',
     'graphql_jwt.refresh_token.apps.RefreshTokenConfig',
     'graphene_file_upload',
 ]
@@ -102,7 +102,7 @@ GRAPHENE = {
 GRAPHQL_JWT = {
     "JWT_VERIFY_EXPIRATION": True,
     "JWT_LONG_RUNNING_REFRESH_TOKEN": True,
-    "JWT_EXPIRATION_DELTA": timedelta(minutes=1),
+    "JWT_EXPIRATION_DELTA": timedelta(minutes=20),
     "JWT_REFRESH_EXPIRATION_DELTA": timedelta(days=1),
     "JWT_REFRESH_COOKIE": True,
     "JWT_REFRESH_TOKEN_COOKIE_NAME": "JWT",
@@ -140,11 +140,11 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-os.makedirs(MEDIA_ROOT, exist_ok=True)
+
 
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880

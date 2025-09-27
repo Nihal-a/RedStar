@@ -65,7 +65,7 @@ class Memberships(models.Model):
     profile = models.TextField(blank=True, null=True)
     address = models.CharField(max_length=200, null=False, blank=False)
     mobileNumber = models.CharField(max_length=15, null=False, blank=False)
-    status = models.BooleanField()
+    validuntil = models.DateField(null=False, blank=False)
 
 
 class Books(models.Model):

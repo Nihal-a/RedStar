@@ -4,16 +4,19 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
-import { InputNumber } from "primereact/inputnumber";
+import { Calendar } from "primereact/calendar";
 import { Toast } from "primereact/toast";
 import { ConfirmDialog, confirmDialog } from "primereact/confirmdialog";
 import { Dialog } from "primereact/dialog";
+import { Dropdown } from "primereact/dropdown";
 import { FilterMatchMode } from "primereact/api";
 import { useQuery, useMutation } from "@apollo/client/react";
+import { format } from "date-fns";
 import { GET_MEMBERSHIPS } from "../../graphql/queries";
 import {
   ADD_MEMBERSHIP,
   DELETE_MEMBERSHIP,
+  RENEW_MEMBERSHIP,
   UPDATE_MEMBERSHIP,
 } from "../../graphql/mutations";
 
@@ -24,6 +27,7 @@ export default function Membership() {
   //mutations
   const [addMembership] = useMutation(ADD_MEMBERSHIP);
   const [updateMembership] = useMutation(UPDATE_MEMBERSHIP);
+  const [renewMembership] = useMutation(RENEW_MEMBERSHIP);
   const [DeleteMembership] = useMutation(DELETE_MEMBERSHIP);
 
   //
@@ -36,11 +40,22 @@ export default function Membership() {
 
   // Modal states
   const [visible, setVisible] = useState(false);
+  const [renewVisible, setrenewVisible] = useState(false);
   const [editingRow, setEditingRow] = useState(null);
+  const [renewRow, setrenewRow] = useState({ member: "", period: "" });
   const [originalRow, setOriginalRow] = useState(null);
   const toast = useRef(null);
 
   //Add/edit Membership
+  function normalizeDate(val) {
+    if (!val) return null;
+    const dateObj = typeof val === "string" ? new Date(val) : val;
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+    const day = String(dateObj.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`; // stays in local date
+  }
+
   const addRow = () => {
     setEditingRow({
       id: Date.now(),
@@ -49,7 +64,7 @@ export default function Membership() {
       profie: "",
       address: "",
       membershipid: "",
-      status: 0,
+
       _isNew: true,
     });
     setVisible(true);
@@ -100,12 +115,16 @@ export default function Membership() {
       } else {
         const updates = {};
 
+        const newDate = normalizeDate(editingRow.validuntil);
+        const oldDate = normalizeDate(originalRow.validuntil);
         if (editingRow.name !== originalRow.name)
           updates.name = editingRow.name;
         if (editingRow.mobileNumber !== originalRow.mobileNumber)
           updates.mobileNumber = editingRow.mobileNumber;
         if (editingRow.address !== originalRow.address)
           updates.address = editingRow.address;
+
+        if (newDate !== oldDate) updates.validuntil = newDate;
 
         await updateMembership({
           variables: {
@@ -170,6 +189,44 @@ export default function Membership() {
     });
   };
 
+  // for renew membership
+
+  const renew = async () => {
+    console.log(renewRow);
+    if (!renewRow.member || !renewRow.newvalidity) {
+      toast.current?.show({
+        severity: "warn",
+        summary: "Validation",
+        detail: "Please select required field",
+      });
+      return;
+    }
+    const normalizedDate = normalizeDate(renewRow.newvalidity);
+    try {
+      await renewMembership({
+        variables: {
+          id: renewRow.member,
+          validuntil: normalizedDate,
+        },
+        refetchQueries: [{ query: GET_MEMBERSHIPS }],
+        awaitRefetchQueries: true,
+      });
+
+      setrenewVisible(false);
+      toast.current?.show({
+        severity: "success",
+        summary: "Saved",
+        detail: "Changes saved.",
+      });
+    } catch (err) {
+      toast.current?.show({
+        severity: "error",
+        summary: "Error",
+        detail: err.message || "Error at membership deletion.",
+      });
+    }
+  };
+
   const onGlobalFilterChange = (e) => {
     const value = e.target.value;
     const _filters = { ...filters };
@@ -205,6 +262,12 @@ export default function Membership() {
               className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center cursor-pointer"
             >
               Add Membership
+            </button>
+            <button
+              onClick={() => setrenewVisible(true)}
+              className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center cursor-pointer"
+            >
+              Renew Membership
             </button>
             <button
               // onClick={exportPDF}
@@ -352,24 +415,47 @@ export default function Membership() {
                 }}
               />
               <Column
+                header="Valid Until"
+                headerClassName="font-[poppins]"
+                alignHeader={"center"}
+                body={(rowData) => {
+                  return rowData.validuntil ? (
+                    format(new Date(rowData.validuntil), "dd-MM-yy")
+                  ) : (
+                    <span className="text-gray-400">No valid Added.</span>
+                  );
+                }}
+                style={{
+                  width: "10%",
+                  textAlign: "center",
+                }}
+                dateFormat="dd-mm-yy"
+              />
+
+              <Column
                 header="Status"
                 headerClassName="font-[poppins]"
                 body={(rowData) => {
+                  // Compare validuntil with today's date
+                  const today = new Date();
+                  const validUntilDate = new Date(rowData.validuntil); // assuming validuntil comes from GraphQL API
+
+                  const isActive = validUntilDate >= today;
+
                   return (
                     <div
                       className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-                        rowData.status == 1
+                        isActive
                           ? "bg-green-100 text-green-800"
                           : "bg-red-100 text-red-800"
                       }`}
                     >
-                      {rowData.status == 1 ? "ACTIVE" : "EXPIRED"}
+                      {isActive ? "ACTIVE" : "EXPIRED"}
                     </div>
                   );
                 }}
                 alignHeader={"center"}
                 style={{
-                  // width: "15%",
                   textAlign: "center",
                 }}
               />
@@ -428,26 +514,56 @@ export default function Membership() {
                 className="w-full placeholder:text-sm !p-1.5 !font-[poppins] !px-3"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1 !font-[poppins]">
-                Contact Number*
-              </label>
-              <InputText
-                value={editingRow.mobileNumber}
-                placeholder="Type lender mobile number..."
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={10}
-                onChange={(e) => {
-                  // Strip everything that is not a digit
-                  const val = e.target.value.replace(/\D/g, "");
-                  setEditingRow({
-                    ...editingRow,
-                    mobileNumber: val,
-                  });
-                }}
-                className="w-full placeholder:text-sm !p-1.5 !font-[poppins] !px-3"
-              />
+            <div className="flex justify-between gap-2">
+              <div
+                className={`flex flex-col ${
+                  editingRow._isNew ? "w-[100%]" : "w-[50%]"
+                }`}
+              >
+                <label className="block text-sm font-medium mb-1 !font-[poppins]">
+                  Contact Number*
+                </label>
+                <InputText
+                  value={editingRow.mobileNumber}
+                  placeholder="Type lender mobile number..."
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={10}
+                  onChange={(e) => {
+                    // Strip everything that is not a digit
+                    const val = e.target.value.replace(/\D/g, "");
+                    setEditingRow({
+                      ...editingRow,
+                      mobileNumber: val,
+                    });
+                  }}
+                  className="w-full placeholder:text-sm !p-1.5 !font-[poppins] !px-3"
+                />
+              </div>
+              {editingRow._isNew ? (
+                ""
+              ) : (
+                <div className="flex flex-col w-[50%] ">
+                  <label className="block text-sm font-medium mb-1 !font-[poppins]">
+                    Valid Until*
+                  </label>
+                  <Calendar
+                    inputClassName="!p-1"
+                    value={
+                      editingRow.validuntil
+                        ? new Date(editingRow.validuntil)
+                        : null
+                    }
+                    className=" placeholder:text-sm  !font-[poppins] !p-0"
+                    onChange={(e) =>
+                      setEditingRow({ ...editingRow, validuntil: e.value })
+                    }
+                    showButtonBar
+                    dateFormat="dd-mm-yy"
+                    readonlyInput
+                  />
+                </div>
+              )}
             </div>
 
             <div>
@@ -479,6 +595,157 @@ export default function Membership() {
             </div>
           </div>
         )}
+      </Dialog>
+
+      {/* Renew Membership */}
+      <Dialog
+        header="Renew Membership"
+        headerClassName="!font-[poppins]"
+        visible={renewVisible}
+        draggable={false}
+        className="w-[90%] md:w-[40%] "
+        modal
+        onHide={() => setrenewVisible(false)}
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button
+              label="Cancel"
+              severity="secondary"
+              className="!font-[poppins] !text-[14px] "
+              onClick={() => setrenewVisible(false)}
+            />
+            <Button
+              label="Save"
+              severity="success"
+              className="!font-[poppins] !text-[14px]"
+              onClick={renew}
+            />
+          </div>
+        }
+      >
+        <div className="flex flex-col gap-3">
+          <div>
+            <label className="block text-sm font-medium mb-1">Member*</label>
+            <Dropdown
+              value={
+                renewRow?.member
+                  ? typeof renewRow.member === "object"
+                    ? renewRow.member?.id?.toString()
+                    : renewRow.member?.toString()
+                  : ""
+              }
+              options={[
+                { label: "Select Member", value: "" },
+                ...(data?.memberships?.map((mbr) => ({
+                  label: `${mbr.name} (${mbr.membershipId})`,
+                  value: mbr.id.toString(),
+                })) || []),
+              ]}
+              placeholder="Select member name or id..."
+              onChange={(e) => {
+                const selectedMember = data.memberships.find(
+                  (mbr) => mbr.id.toString() === e.value
+                );
+                const today = new Date();
+                const currentValidity = selectedMember.validuntil
+                  ? new Date(selectedMember.validuntil)
+                  : null;
+
+                if (currentValidity && currentValidity >= today) {
+                  alert("This member is still ACTIVE. Renewal not allowed.");
+                  return;
+                }
+                setrenewRow({
+                  ...renewRow,
+                  member: e.value || "",
+                  validuntil: selectedMember
+                    ? new Date(selectedMember.validuntil)
+                    : null,
+                });
+              }}
+              className="w-full placeholder:text-sm !font-[poppins] [&_.p-dropdown-label]:!p-1.5 "
+            />
+          </div>
+          <div className="flex flex-col w-[50%] ">
+            <label className="block text-sm font-medium mb-1 !font-[poppins]">
+              Current Validity Until*
+            </label>
+            <Calendar
+              inputClassName="!p-1"
+              value={renewRow.validuntil || null}
+              className="placeholder:text-sm !font-[poppins] !p-0"
+              dateFormat="dd-mm-yy"
+              disabled
+              readonlyinput
+            />
+          </div>
+          <div className="flex justify-between gap-2">
+            {/* Select Period */}
+            <div className="flex flex-col w-[50%]">
+              <label className="block text-sm font-medium mb-1 !font-[poppins]">
+                Select Period*
+              </label>
+              <Dropdown
+                value={renewRow.period || ""}
+                options={[
+                  { label: "6 Months", value: "6m" },
+                  { label: "1 Year", value: "1y" },
+                  { label: "2 Years", value: "2y" },
+                  { label: "5 Years", value: "5y" },
+                ]}
+                placeholder="Select period..."
+                onChange={(e) => {
+                  const today = new Date();
+
+                  let newDate = new Date();
+
+                  switch (e.value) {
+                    case "6m":
+                      newDate.setMonth(newDate.getMonth() + 6);
+                      break;
+                    case "1y":
+                      newDate.setFullYear(newDate.getFullYear() + 1);
+                      break;
+                    case "2y":
+                      newDate.setFullYear(newDate.getFullYear() + 2);
+                      break;
+                    case "5y":
+                      newDate.setFullYear(newDate.getFullYear() + 5);
+                      break;
+                    default:
+                      break;
+                  }
+
+                  setrenewRow({
+                    ...renewRow,
+                    period: e.value,
+                    newvalidity: newDate,
+                  });
+                }}
+                disabled={!renewRow.member}
+                className="w-full placeholder:text-sm !font-[poppins] [&_.p-dropdown-label]:!p-1.5"
+              />
+            </div>
+
+            {/* New Valid Until */}
+            <div className="flex flex-col w-[50%]">
+              <label className="block text-sm font-medium mb-1 !font-[poppins]">
+                New Validity Until*
+              </label>
+              <Calendar
+                inputClassName="!p-1"
+                value={
+                  renewRow.newvalidity ? new Date(renewRow.newvalidity) : null
+                }
+                disabled
+                className="placeholder:text-sm !font-[poppins] !p-0"
+                showButtonBar
+                dateFormat="dd-mm-yy"
+                readonlyInput
+              />
+            </div>
+          </div>
+        </div>
       </Dialog>
     </section>
   );

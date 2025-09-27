@@ -264,6 +264,7 @@ export const ADD_MEMBERSHIP = gql`
         address
         mobileNumber
         membershipId
+        validuntil
       }
     }
   }
@@ -276,6 +277,7 @@ export const UPDATE_MEMBERSHIP = gql`
     $address: String
     $mobileNumber: String
     $profile: String
+    $validuntil: Date
   ) {
     updateMembership(
       id: $id
@@ -283,6 +285,7 @@ export const UPDATE_MEMBERSHIP = gql`
       address: $address
       mobileNumber: $mobileNumber
       profile: $profile
+      validuntil: $validuntil
     ) {
       memberships {
         id
@@ -290,6 +293,22 @@ export const UPDATE_MEMBERSHIP = gql`
         address
         mobileNumber
         profile
+        validuntil
+      }
+    }
+  }
+`;
+
+export const RENEW_MEMBERSHIP = gql`
+  mutation RenewMembership($id: ID!, $validuntil: Date!) {
+    renewMembership(id: $id, validuntil: $validuntil) {
+      memberships {
+        id
+        name
+        address
+        mobileNumber
+        profile
+        validuntil
       }
     }
   }

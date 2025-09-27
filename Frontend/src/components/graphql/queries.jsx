@@ -93,7 +93,7 @@ export const GET_MEMBERSHIPS = gql`
       membershipId
       profile
       mobileNumber
-      status
+      validuntil
     }
   }
 `;

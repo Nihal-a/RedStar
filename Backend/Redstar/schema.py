@@ -3,11 +3,13 @@ import graphene
 from graphql import GraphQLError
 from graphene_django.types import DjangoObjectType
 from .models import *
-from datetime import datetime
+from datetime import date, timedelta,datetime
+from graphene.types.datetime import Date
 from django.db.models import F,Sum 
 import graphql_jwt
 from graphql_jwt.decorators import login_required
 from django.contrib.auth import get_user_model
+from graphene_file_upload.scalars import Upload
 
 # membershipId Generator function
 def MembershipIdGenerator(last_id=None):
@@ -57,13 +59,13 @@ class CategoryType(DjangoObjectType):
 
 class InventoryLendingType(DjangoObjectType):
     class Meta:
-        model = InventoryLending
+        model = InventoryLending    
         fields = ("id", "name", "mobileNumber", "inventory", "address", "lendedDate", "returnDate", "remarks", "status")
 
 class MembershipsType(DjangoObjectType):
     class Meta:
         model = Memberships
-        fields = ("id", "membershipId", "name", "profile", "mobileNumber",  "address",  "status")
+        fields = ("id", "membershipId", "name", "profile", "mobileNumber", "address", "validuntil")
 
 class BookType(DjangoObjectType):
     class Meta:
@@ -374,7 +376,8 @@ class AddMembership(graphene.Mutation):
         else:
             membershipId=MembershipIdGenerator()
 
-        memberships = Memberships.objects.create(name=name, address=address, mobileNumber=mobileNumber, membershipId=membershipId, status=True)
+        validuntil_date = date.today() + timedelta(days=365)
+        memberships = Memberships.objects.create(name=name, address=address, mobileNumber=mobileNumber, membershipId=membershipId, validuntil=validuntil_date)
         return AddMembership(memberships=memberships)
     
 
@@ -385,6 +388,7 @@ class UpdateMembership(graphene.Mutation):
         address = graphene.String()
         mobileNumber = graphene.String()
         profile =graphene.String()
+        validuntil =graphene.Date()
 
 
     memberships = graphene.Field(MembershipsType)
@@ -398,6 +402,21 @@ class UpdateMembership(graphene.Mutation):
         
         memberships.save()
         return UpdateMembership(memberships=memberships)
+    
+
+
+class RenewMembership(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+        validuntil = Date(required=True)   # instead of String
+
+    memberships = graphene.Field(MembershipsType)
+
+    def mutate(root, info, id, validuntil):
+        memberships = Memberships.objects.get(pk=int(id))
+        memberships.validuntil = validuntil 
+        memberships.save()
+        return RenewMembership(memberships=memberships)
     
 class DeleteMembership(graphene.Mutation):
     class Arguments:
@@ -595,6 +614,23 @@ class DeleteBookLending(graphene.Mutation):
             raise Exception("Lending record not found.")
 
 
+
+class UploadFile(graphene.Mutation):
+    class Arguments:
+        file = Upload(required=True)
+
+    ok = graphene.Boolean()
+    file_url = graphene.String()
+
+    def mutate(root, info, file, **kwargs):
+        # Save file manually (example: MEDIA folder)
+        with open(f"media/{file.name}", "wb+") as destination:
+            for chunk in file.chunks():
+                destination.write(chunk)
+
+        return UploadFile(ok=True, file_url=f"/media/{file.name}")
+
+
 class Mutation(graphene.ObjectType):
 
     token_auth = graphql_jwt.ObtainJSONWebToken.Field()
@@ -620,6 +656,7 @@ class Mutation(graphene.ObjectType):
 
     add_membership = AddMembership.Field()
     update_membership = UpdateMembership.Field()
+    renew_membership = RenewMembership.Field()
     delete_membership = DeleteMembership.Field()
 
     create_book = CreateBook.Field()
@@ -631,6 +668,6 @@ class Mutation(graphene.ObjectType):
     return_book_lending = ReturnBookLending.Field()
     delete_book_lending = DeleteBookLending.Field()
 
-
+    upload_file = UploadFile.Field()
 
 schema = graphene.Schema(query=Query, mutation=Mutation)
