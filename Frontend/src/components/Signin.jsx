@@ -57,37 +57,46 @@ const Signin = () => {
                   Enter your credential to access to your account.
                 </p>
               </div>
-              <div className="w-full  relative mt-4">
-                <input
-                  value={username}
-                  onChange={(e) => setusername(e.target.value)}
-                  type="text"
-                  placeholder="Enter your username "
-                  className="bg-white md:placeholder:text-[13px] placeholder:text-[13px] w-full px-2  pl-10 py-[5px] ring-1 ring-gray-200 rounded-md text-[14px] font-[poppins] placeholder:transparent  focus:outline-none focus:ring-1   placeholder:text-gray-400 "
-                />
-                <i className="bi bi-person absolute top-[50%] translate-y-[-50%] left-[10px] text-[18px] text-black"></i>
-              </div>
-
-              <div className="w-full relative mt-4">
-                <input
-                  value={password}
-                  onChange={(e) => setpassword(e.target.value)}
-                  type="password"
-                  name="CurrentPass"
-                  placeholder="Enter your password"
-                  className="bg-white md:placeholder:text-[13px] placeholder:text-[13px] w-full px-2  pl-10 py-[5px] ring-1 ring-gray-200 rounded-md text-[14px] font-[poppins] placeholder:transparent  focus:outline-none focus:ring-1    placeholder:text-gray-400 "
-                />
-                <i className="bi bi-person-lock absolute top-[50%] translate-y-[-50%] left-[10px] text-[18px] text-black"></i>
-              </div>
-              <button
-                onClick={handleLogin}
-                // disabled={loginLoading}
-                className="relative w-full py-1 mt-4 rounded-md ring-1 ring-[#ffffff] focus:outline-0 text-[#E01514] font-bold font-[poppins] active:bg-[#eeeeee] bg-[#ffffff] disabled:opacity-50 disabled:cursor-not-allowed  cursor-pointer"
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleLogin();
+                }}
+                className="w-full relative flex flex-col gap-4"
               >
-                <p className="text-[14px] font-[poppins]">
-                  {/* {loginLoading ? "Logging in..." : "Login"} */}LOGIN
-                </p>
-              </button>
+                <div className="w-full relative">
+                  <input
+                    value={username}
+                    onChange={(e) => setusername(e.target.value)}
+                    type="text"
+                    placeholder="Enter your username"
+                    autoComplete="username"
+                    className="bg-white md:placeholder:text-[13px] placeholder:text-[13px] w-full px-2 pl-10 py-[5px] ring-1 ring-gray-200 rounded-md text-[14px] font-[poppins] placeholder:transparent focus:outline-none focus:ring-1 placeholder:text-gray-400"
+                  />
+
+                  <i className="bi bi-person absolute top-[50%] translate-y-[-50%] left-[10px] text-[18px] text-black"></i>
+                </div>
+
+                <div className="w-full relative">
+                  <input
+                    value={password}
+                    onChange={(e) => setpassword(e.target.value)}
+                    type="password"
+                    name="CurrentPass"
+                    placeholder="Enter your password"
+                    autoComplete="current-password"
+                    className="bg-white md:placeholder:text-[13px] placeholder:text-[13px] w-full px-2 pl-10 py-[5px] ring-1 ring-gray-200 rounded-md text-[14px] font-[poppins] placeholder:transparent focus:outline-none focus:ring-1 placeholder:text-gray-400"
+                  />
+                  <i className="bi bi-person-lock absolute top-[50%] translate-y-[-50%] left-[10px] text-[18px] text-black"></i>
+                </div>
+
+                <button
+                  type="submit"
+                  className="relative w-full py-1 mt-4 rounded-md ring-1 ring-[#ffffff] focus:outline-0 text-[#E01514] font-bold font-[poppins] active:bg-[#eeeeee] bg-[#ffffff] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  <p className="text-[14px] font-[poppins]">LOGIN</p>
+                </button>
+              </form>
             </div>
           </div>
         </div>

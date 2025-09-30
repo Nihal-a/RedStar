@@ -12,13 +12,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = env('SECRETKEY')
 
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
 
 ALLOWED_HOSTS = ['*']
 
 
-# Application definition
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -30,7 +28,6 @@ INSTALLED_APPS = [
     'Redstar',
     'corsheaders',
     'graphene_django',
-    # 'graphql_auth',
     'graphql_jwt.refresh_token.apps.RefreshTokenConfig',
     'graphene_file_upload',
 ]
@@ -102,27 +99,15 @@ GRAPHENE = {
 GRAPHQL_JWT = {
     "JWT_VERIFY_EXPIRATION": True,
     "JWT_LONG_RUNNING_REFRESH_TOKEN": True,
-    "JWT_EXPIRATION_DELTA": timedelta(minutes=20),
+    "JWT_EXPIRATION_DELTA": timedelta(minutes=30),
     "JWT_REFRESH_EXPIRATION_DELTA": timedelta(days=1),
     "JWT_REFRESH_COOKIE": True,
     "JWT_REFRESH_TOKEN_COOKIE_NAME": "JWT",
     "JWT_COOKIE_SAMESITE": "Lax",
     "JWT_COOKIE_SECURE": False,
-    "JWT_ALLOW_REFRESH_TOKEN_ROTATION": False,  # This should prevent new refresh tokens
-    "JWT_REUSE_REFRESH_TOKENS": True,  # Add this setting
+    "JWT_ALLOW_REFRESH_TOKEN_ROTATION": False,  
+    "JWT_REUSE_REFRESH_TOKENS": True, 
 }
-# GRAPHQL_JWT = {
-#     "JWT_VERIFY_EXPIRATION": True,
-#     "JWT_LONG_RUNNING_REFRESH_TOKEN": True,
-#     # "JWT_REFRESH_EXPIRED_HANDLER": lambda orig_iat, context: False,
-#     "JWT_EXPIRATION_DELTA": timedelta(minutes=1),
-#     "JWT_REFRESH_EXPIRATION_DELTA": timedelta(days=1),
-#     "JWT_REFRESH_COOKIE": True,               # ✅ store refresh token in HttpOnly cookie
-#     "JWT_REFRESH_TOKEN_COOKIE_NAME": "JWT",   # optional
-#     "JWT_COOKIE_SAMESITE": "Lax",
-#     "JWT_COOKIE_SECURE": False,               # False for dev
-# }
-
 
 
 CORS_ALLOW_ALL_ORIGINS = True  #development purpose only, use with caution in production

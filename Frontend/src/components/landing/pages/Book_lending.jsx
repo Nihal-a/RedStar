@@ -51,7 +51,7 @@ export default function BookLending() {
 
   const [filters, setFilters] = useState({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    lendedDate: { value: null, matchMode: FilterMatchMode.DATE_IS },
+    status: { value: null, matchMode: "equals" },
   });
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [first, setFirst] = useState(0);
@@ -116,7 +116,7 @@ export default function BookLending() {
           },
           refetchQueries: [
             { query: GET_BOOK_LENDING },
-            { query: GET_MEMEBRSHIPS },
+            { query: GET_MEMBERSHIPS },
             { query: GET_BOOKS },
           ],
           awaitRefetchQueries: true,
@@ -203,7 +203,7 @@ export default function BookLending() {
         },
         refetchQueries: [
           { query: GET_BOOK_LENDING },
-          { query: GET_MEMEBRSHIPS },
+          { query: GET_MEMBERSHIPS },
           { query: GET_BOOKS },
         ],
         awaitRefetchQueries: true,
@@ -233,7 +233,7 @@ export default function BookLending() {
       icon: (
         <i className="pi pi-trash text-red-600" style={{ fontSize: "18px" }} />
       ),
-      acceptLabel: "Delete",
+      acceptlabel: "Delete",
       acceptClassName: "m-0",
       rejectLabel: "Cancel",
       draggable: false,
@@ -243,7 +243,7 @@ export default function BookLending() {
             variables: { id: rowData.id },
             refetchQueries: [
               { query: GET_BOOK_LENDING },
-              { query: GET_MEMEBRSHIPS },
+              { query: GET_MEMBERSHIPS },
               { query: GET_BOOKS },
             ],
             awaitRefetchQueries: true,
@@ -267,11 +267,14 @@ export default function BookLending() {
 
   const onGlobalFilterChange = (e) => {
     const value = e.target.value;
-    const _filters = { ...filters };
+    let _filters = { ...filters };
     _filters["global"].value = value;
+
     setFilters(_filters);
     setGlobalFilterValue(value);
   };
+
+
 
   //for when adding new coloumn new added will be listed at last
   const onPage = (e) => {
@@ -284,7 +287,7 @@ export default function BookLending() {
         <div className="w-full flex flex-col md:flex-row items-center justify-between gap-3">
           <div className="">
             <h1 className="font-bold md:text-start text-center md:text-[22px] text-[16px]">
-              INVENTORY LENDING
+              BOOKS LENDING
             </h1>
             <p className="text-sm text-gray-500 ">
               Manage books lents, add/edit lents
@@ -324,7 +327,7 @@ export default function BookLending() {
           )
         ) : (
           <>
-            <div className="w-full p-5 bg-[#F9FAFB] mb-3 rounded-sm border-1 border-[#e6e6e6] flex md:justify-end justify-center">
+            <div className="w-full p-5 bg-[#F9FAFB] mb-3 rounded-sm border-1 border-[#e6e6e6] flex md:justify-end justify-center gap-2">
               <div className="opacity-0 ">o</div>
               <div className="relative ">
                 <input
@@ -336,6 +339,30 @@ export default function BookLending() {
                 />
                 <i className="bi bi-search hidden md:block absolute left-[10px] top-[50%] translate-y-[-50%] text-[14px] text-black"></i>
               </div>
+              <Dropdown
+                value={filters.status?.value ?? null}
+                options={[
+                  { label: "All", value: "ALL" },
+                  { label: "Pending", value: false },
+                  { label: "Returned", value: true },
+                ]}
+                onChange={(e) => {
+                  let _filters = { ...filters };
+
+                  if (e.value === "ALL") {
+                    delete _filters["status"];
+                  } else {
+                    _filters["status"] = {
+                      value: e.value,
+                      matchMode: "equals",
+                    };
+                  }
+
+                  setFilters(_filters);
+                }}
+                placeholder="Filter by Status "
+                className="w-35 text-sm [&_.p-dropdown-label]:!p-1.5"
+              />
             </div>
 
             <DataTable
@@ -452,13 +479,12 @@ export default function BookLending() {
               />
               <Column
                 header="Deadline"
+                sortable
                 headerClassName="font-[poppins]"
                 alignHeader={"center"}
                 body={(rowData) => {
                   if (!rowData.lendedDate) return "-";
-
                   const newDate = addMonths(new Date(rowData.lendedDate), 1);
-
                   return format(newDate, "dd-MM-yy");
                 }}
                 style={{
@@ -505,6 +531,7 @@ export default function BookLending() {
 
               <Column
                 header="Status"
+                filterField="status"
                 headerClassName="font-[poppins]"
                 body={(rowData) => {
                   return (
@@ -574,17 +601,24 @@ export default function BookLending() {
                   }
                   options={[
                     { label: "Select Member", value: "" },
-                    ...(memberData?.memberships?.map((mbr) => ({
-                      label: `${mbr.name} (${mbr.membershipId})`,
-                      value: mbr.id.toString(),
-                    })) || []),
+                    ...(memberData?.memberships?.map((mbr) => {
+                      const today = new Date();
+                      const expiry = new Date(mbr.validuntil);
+                      const isExpired = expiry < today;
+
+                      return {
+                        label: `${mbr.name} (${mbr.membershipId}) ${
+                          isExpired ? " - Expired" : ""
+                        }`,
+                        value: mbr.id.toString(),
+                        disabled: isExpired,
+                      };
+                    }) || []),
                   ]}
                   placeholder="Type lender name..."
                   onChange={(e) =>
                     setEditingRow({ ...editingRow, member: e.value || "" })
                   }
-                  // filter
-                  // filterBy="label"
                   className="w-full placeholder:text-sm !font-[poppins] [&_.p-dropdown-label]:!p-1.5 "
                 />
               )}
@@ -714,7 +748,6 @@ export default function BookLending() {
         onHide={() => setconfirmVisible(false)}
         draggable={false}
         header="Return Confirmation"
-        acceptLabel="Confirm"
       >
         <div className="flex flex-col gap-3 ">
           <p>

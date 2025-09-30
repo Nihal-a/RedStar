@@ -96,13 +96,6 @@ class Query(graphene.ObjectType):
     counts = graphene.Field(CountsType)
     memberships = graphene.List(MembershipsType)
     book_lending = graphene.List(BookLendingType)
-    user = graphene.List(UserType)
-
-    def resolve_user(root, info, **kwargs):
-        user = info.context.user
-        if not user.is_authenticated:
-            raise Exception("Authenticaton denied.") 
-        return User.objects.all()
 
     def resolve_categories(root, info):
         return Category.objects.all().order_by("name")
@@ -256,11 +249,11 @@ class AddInventoryLending(graphene.Mutation):
         mobileNumber = graphene.String(required=True)
         address = graphene.String(required=True)
         lendedDate  = graphene.Date(required=True)
-        remarks = graphene.String(required=False)
+        remarks = graphene.String()
     
     inventory_lending = graphene.Field(InventoryLendingType)
     
-    def mutate(self, info, name, inventory, mobileNumber, address, lendedDate, remarks):
+    def mutate(self, info, name, inventory, mobileNumber, address, lendedDate, remarks=None):
         if Inventory.objects.get(pk=inventory).status ==  False :
             raise Exception("Lending record not found")
         else:
@@ -461,12 +454,43 @@ class UpdateBook(graphene.Mutation):
     def mutate(root, info, id, **kwargs):
         book = Books.objects.get(pk=int(id))
 
+        if "total" in kwargs and kwargs["total"] is not None:
+            new_total = kwargs["total"]
+            old_total = book.total
+            old_available = book.available
+
+            lent_out = old_total - old_available
+
+            if new_total < lent_out:
+                raise Exception(
+                    f"Cannot reduce total to {new_total}, since {lent_out} copies are currently lent out."
+                )
+
+            if new_total > old_total:
+                diff = new_total - old_total
+                book.available = old_available + diff
+
+            elif new_total < old_total:
+                diff = old_total - new_total
+
+                if diff > old_available:
+                    raise Exception(
+                        f"Cannot reduce total by {diff}, only {old_available} copies are available."
+                    )
+
+                book.available = old_available - diff
+            book.total = new_total
+
+            kwargs.pop("total")
+
         for field, value in kwargs.items():
-            if value is not None: 
+            if value is not None:
                 setattr(book, field, value)
-        
+
         book.save()
         return UpdateBook(book=book)
+
+
     
 
 class DeleteBook(graphene.Mutation):

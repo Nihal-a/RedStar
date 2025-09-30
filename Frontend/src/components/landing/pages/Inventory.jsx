@@ -430,7 +430,7 @@ export default function Inventory() {
                 }}
               />
 
-              <Column
+              {/* <Column
                 header="Image"
                 headerClassName="uppercase"
                 body={(rowData) => {
@@ -450,7 +450,7 @@ export default function Inventory() {
                   // width: "10%",
                   textAlign: "center",
                 }}
-              />
+              /> */}
 
               <Column
                 field="name"
@@ -477,7 +477,6 @@ export default function Inventory() {
                 headerClassName="font-[poppins] uppercase"
                 alignHeader={"center"}
                 style={{
-                  width: "10%",
                   textAlign: "center",
                 }}
               />
@@ -633,7 +632,7 @@ export default function Inventory() {
                 Add
               </button>
             </div>
-            <div className="mt-3">
+            {/* <div className="mt-3">
               <label className="block text-sm font-medium mb-1">
                 Product Image
               </label>
@@ -668,7 +667,7 @@ export default function Inventory() {
                   />
                 </div>
               )}
-            </div>
+            </div> */}
             <div className="mt-4 flex justify-end">
               {" "}
               <div className="relative ">

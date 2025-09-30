@@ -86,9 +86,7 @@ export default function Book() {
     if (
       !editingRow.name?.trim() ||
       !editingRow.author?.trim() ||
-      !editingRow.category?.trim() ||
-      !editingRow.count ||
-      editingRow.count < 1
+      !editingRow.category?.trim()
     ) {
       toast.current?.show({
         severity: "warn",
@@ -202,6 +200,7 @@ export default function Book() {
     setFirst(e.first);
     setRows(e.rows);
   };
+
 
   return (
     <section className="w-full min-h-screen px-5 py-5 bg-[#f5f5f5]">
@@ -470,13 +469,13 @@ export default function Book() {
                 Total Count*
               </label>
               <InputNumber
-                value={editingRow.count}
+                value={editingRow.total}
                 onValueChange={(e) =>
                   setEditingRow({ ...editingRow, count: e.value ?? 0 })
                 }
                 inputClassName="!p-1.5 !px-3"
                 className="w-full placeholder:text-sm  !font-[poppins] "
-                min={1}
+                min={0}
                 showButtons
               />
             </div>

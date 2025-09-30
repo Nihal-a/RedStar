@@ -192,7 +192,6 @@ export default function Membership() {
   // for renew membership
 
   const renew = async () => {
-    console.log(renewRow);
     if (!renewRow.member || !renewRow.newvalidity) {
       toast.current?.show({
         severity: "warn",
@@ -250,10 +249,10 @@ export default function Membership() {
         <div className="w-full flex flex-col md:flex-row  items-center justify-between gap-3">
           <div>
             <h1 className="font-bold md:text-start text-center md:text-[22px] text-[16px]">
-              MEMBERSHIP
+              MEMBERSHIPS
             </h1>
             <p className="text-sm text-gray-500">
-              Manage membership, add/edit membership
+              Manage membership, add/edit memberships
             </p>
           </div>
           <div className="flex gap-3">
@@ -316,7 +315,7 @@ export default function Membership() {
               onPage={onPage} //for when adding new coloumn new added will be listed at last
               filters={filters}
               globalFilterFields={["name", "mobileNumber", "address"]}
-              emptyMessage="No Membership found."
+              emptyMessage="No Memberships found."
               tableStyle={{ minWidth: "70rem", tableLayout: "fixed" }}
               className=" overflow-auto !text-[14px] !font-[poppins]"
             >
@@ -369,17 +368,20 @@ export default function Membership() {
               <Column
                 header="Profile"
                 headerClassName=""
-                // body={(rowData) => (
-                //   <img
-                //     src={resolveImageSrc(rowData.profile)}
-                //     alt="item"
-                //     className="mx-auto w-10 h-10 object-cover rounded-[6px]"
-                //   />
-                // )}
+                body={(rowData) => {
+                  return rowData.profile ? (
+                    <img
+                      src={rowData.profile}
+                      alt={rowData.profile}
+                      className="mx-auto w-10 h-10 object-cover rounded-[6px]"
+                    />
+                  ) : (
+                    <span className="text-gray-400">No Profile</span>
+                  );
+                }}
                 bodyClassName="text-center"
                 alignHeader={"center"}
                 style={{
-                  // width: "10%",
                   textAlign: "center",
                 }}
               />
@@ -500,6 +502,7 @@ export default function Membership() {
                   setEditingRow({ ...editingRow, name: e.target.value })
                 }
                 placeholder="Enter name..."
+                autoComplete="name"
                 className="w-full placeholder:text-sm !p-1.5 !font-[poppins] !px-3"
               />
             </div>
@@ -507,6 +510,7 @@ export default function Membership() {
               <label className="block text-sm font-medium mb-1">Address</label>
               <InputText
                 value={editingRow.address}
+                autoComplete="address"
                 placeholder="Enter address..."
                 onChange={(e) =>
                   setEditingRow({ ...editingRow, address: e.target.value })
@@ -529,8 +533,8 @@ export default function Membership() {
                   inputMode="numeric"
                   pattern="[0-9]*"
                   maxLength={10}
+                  autoComplete="tel"
                   onChange={(e) => {
-                    // Strip everything that is not a digit
                     const val = e.target.value.replace(/\D/g, "");
                     setEditingRow({
                       ...editingRow,
@@ -567,10 +571,13 @@ export default function Membership() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Profile</label>
+              <label className="block text-sm font-medium mb-1">
+                Profile (currently disabled)
+              </label>
               <input
                 type="file"
                 accept="image/*"
+                disabled
                 className="w-full pl-3 ring-1 rounded-sm p-1.5 ring-gray-300 "
                 onChange={(e) => {
                   const file = e.target.files?.[0];
@@ -676,7 +683,6 @@ export default function Membership() {
               className="placeholder:text-sm !font-[poppins] !p-0"
               dateFormat="dd-mm-yy"
               disabled
-              readonlyinput
             />
           </div>
           <div className="flex justify-between gap-2">
@@ -741,7 +747,6 @@ export default function Membership() {
                 className="placeholder:text-sm !font-[poppins] !p-0"
                 showButtonBar
                 dateFormat="dd-mm-yy"
-                readonlyInput
               />
             </div>
           </div>

@@ -39,6 +39,7 @@ export default function InventoryLending() {
   const [products, setProducts] = useState([]);
   const [filters, setFilters] = useState({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    status: { value: null, matchMode: "equals" },
   });
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [first, setFirst] = useState(0);
@@ -127,12 +128,6 @@ export default function InventoryLending() {
             { query: GET_CATEGORIES },
           ],
           awaitRefetchQueries: true,
-        });
-        setVisible(false);
-        toast.current?.show({
-          severity: "success",
-          summary: "Saved",
-          detail: "Inventory lending record added",
         });
       } else {
         const newLendedDate = normalizeDate(editingRow.lendedDate);
@@ -413,7 +408,7 @@ export default function InventoryLending() {
           )
         ) : (
           <>
-            <div className="w-full p-5 bg-[#F9FAFB] mb-3 rounded-sm border-1 border-[#e6e6e6] flex md:justify-end justify-center">
+            <div className="w-full p-5 bg-[#F9FAFB] mb-3 rounded-sm border-1 border-[#e6e6e6] flex md:justify-end justify-center gap-2">
               <div className="relative ">
                 <input
                   value={globalFilterValue}
@@ -424,6 +419,30 @@ export default function InventoryLending() {
                 />
                 <i className="bi bi-search hidden md:block absolute left-[10px] top-[50%] translate-y-[-50%] text-[14px] text-black"></i>
               </div>
+              <Dropdown
+                value={filters.status?.value ?? null}
+                options={[
+                  { label: "All", value: "ALL" },
+                  { label: "Pending", value: false },
+                  { label: "Returned", value: true },
+                ]}
+                onChange={(e) => {
+                  let _filters = { ...filters };
+
+                  if (e.value === "ALL") {
+                    delete _filters["status"];
+                  } else {
+                    _filters["status"] = {
+                      value: e.value,
+                      matchMode: "equals",
+                    };
+                  }
+
+                  setFilters(_filters);
+                }}
+                placeholder="Filter by Status "
+                className="w-35 text-sm [&_.p-dropdown-label]:!p-1.5"
+              />
             </div>
 
             <DataTable
@@ -858,7 +877,6 @@ export default function InventoryLending() {
         onHide={() => setconfirmVisible(false)}
         draggable={false}
         header="Return Confirmation"
-        acceptLabel="Confirm"
       >
         <div className="flex flex-col gap-3 ">
           <p>
