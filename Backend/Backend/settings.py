@@ -14,7 +14,7 @@ SECRET_KEY = env('SECRETKEY')
 
 DEBUG = env('DEBUG')
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['redstarpunnathala.in']
 
 
 
@@ -104,34 +104,30 @@ GRAPHQL_JWT = {
     "JWT_REFRESH_COOKIE": True,
     "JWT_REFRESH_TOKEN_COOKIE_NAME": "JWT",
     "JWT_COOKIE_SAMESITE": "Lax",
-    "JWT_COOKIE_SECURE": False,
+    "JWT_COOKIE_SECURE": True,
     "JWT_ALLOW_REFRESH_TOKEN_ROTATION": False,  
     "JWT_REUSE_REFRESH_TOKENS": True, 
 }
 
-
-CORS_ALLOW_ALL_ORIGINS = True  #development purpose only, use with caution in production
+CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
-    'http://localhost:5173',
-    'http://192.168.18.144:5173', 
+    'https://redstarpunnathala.in',
 ]
+CSRF_TRUSTED_ORIGINS = ['https://redstarpunnathala.in']
 
-# CORS_EXPOSE_HEADERS=["Content-Type","X-CSRFToken","Authorization"]
 CORS_ALLOW_CREDENTIALS = True
 
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:5173",
-    'http://192.168.18.144:5173', 
-]
-
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+JWT_COOKIE_SECURE = True
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 
 
-
-FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880  
 DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880
 
 # Password validation
