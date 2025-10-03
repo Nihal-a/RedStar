@@ -8,5 +8,5 @@ from graphql_jwt.decorators import jwt_cookie
 from graphene_file_upload.django import FileUploadGraphQLView
 
 urlpatterns = [
-    path("graphql/", jwt_cookie(csrf_exempt(FileUploadGraphQLView.as_view(graphiql=True)))),
+    path("api/graphql/", jwt_cookie(csrf_exempt(FileUploadGraphQLView.as_view(graphiql=True)))),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
