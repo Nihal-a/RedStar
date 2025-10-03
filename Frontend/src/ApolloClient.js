@@ -8,7 +8,7 @@ import {
 import { ErrorLink } from "@apollo/client/link/error";
 
 const httpLink = new HttpLink({
-  uri: "http://redstarpunnathala.in/api/graphql/",
+  uri: "https://redstarpunnathala.in/api/graphql/",
   credentials: "include", // important for cookies
 });
 
