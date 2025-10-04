@@ -255,7 +255,33 @@ export default function Membership() {
     setFirst(e.first);
     setRows(e.rows);
   };
-  console.log(data);
+
+  //pdf
+  const handlePdf = async () => {
+    fetch("https://pdf.trickydot.com/url", {
+      method: "POST",
+      headers: {
+        "Content-type": "application/json",
+        "x-api-key": "trickydot_pdf_maker_api",
+      },
+      body: JSON.stringify({
+        url: "https://redstarpunnathala.in/report/memberships",
+      }),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("not ok at response");
+        }
+        return response.blob();
+      })
+      .then((blob) => {
+        const pdfUrl = URL.createObjectURL(blob);
+        window.open(pdfUrl);
+      })
+      .catch((err) => {
+        console.log("error:" + err);
+      });
+  };
   return (
     <section className="w-full min-h-screen px-5 py-5 bg-[#f5f5f5]">
       <Toast ref={toast} />
@@ -284,7 +310,7 @@ export default function Membership() {
               Renew Membership
             </button>
             <button
-              onClick={() => window.open("/report/memberships", "_blank")}
+              onClick={() => handlePdf()}
               className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center cursor-pointer"
             >
               <i className="bi bi-file-earmark-pdf pr-1 "></i>
@@ -386,7 +412,7 @@ export default function Membership() {
                 body={(rowData) => {
                   return rowData.profile ? (
                     <img
-                      src={`https://192.168.18.144:8000/media/${rowData.profile}`}
+                      src={`https://redstarpunnathala.in/media/profile/${rowData.profile}`}
                       alt={rowData.profile}
                       className="mx-auto w-10 h-10 object-cover rounded-[6px]"
                     />

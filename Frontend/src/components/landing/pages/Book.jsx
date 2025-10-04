@@ -252,7 +252,6 @@ export default function Book() {
             <button
               className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center cursor-pointer"
               onClick={() => {
-                window.open("/report/books", "_blank");
                 handlePdf();
               }}
             >

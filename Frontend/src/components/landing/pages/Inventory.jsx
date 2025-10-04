@@ -361,6 +361,32 @@ export default function Inventory() {
     );
   };
 
+  //pdf
+  const handlePdf = async () => {
+    fetch("https://pdf.trickydot.com/url", {
+      method: "POST",
+      headers: {
+        "Content-type": "application/json",
+        "x-api-key": "trickydot_pdf_maker_api",
+      },
+      body: JSON.stringify({
+        url: "https://redstarpunnathala.in/report/inventory",
+      }),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("not ok at response");
+        }
+        return response.blob();
+      })
+      .then((blob) => {
+        const pdfUrl = URL.createObjectURL(blob);
+        window.open(pdfUrl);
+      })
+      .catch((err) => {
+        console.log("error:" + err);
+      });
+  };
   return (
     <section className="w-full h-full px-5 py-5 bg-[#f5f5f5]">
       <div className="w-full bg-white rounded-lg shadow-md p-4 mb-4 flex flex-col md:flex-row items-center justify-between gap-4">
@@ -389,7 +415,7 @@ export default function Inventory() {
             </button>
             <button
               className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center flex-shrink-0"
-              onClick={() => window.open("/report/inventory", "_blank")}
+              onClick={() => handlePdf()}
             >
               <i className="bi bi-file-earmark-pdf pr-1"></i>
               Export pdf
@@ -482,7 +508,7 @@ export default function Inventory() {
                 body={(rowData) => {
                   return rowData.image ? (
                     <img
-                      src={`redstarpunnathala.ina/media/${rowData.image}`}
+                      src={`https://redstarpunnathala.in/media/category/${rowData.image}`}
                       alt={rowData.name}
                       className="mx-auto w-10 h-10 object-cover rounded-[2px]"
                     />

@@ -368,7 +368,32 @@ export default function InventoryLending() {
     originalRow?.inventory,
   ]);
 
-  console.log(selectedRow);
+  //pdf
+  const handlePdf = async () => {
+    fetch("https://pdf.trickydot.com/url", {
+      method: "POST",
+      headers: {
+        "Content-type": "application/json",
+        "x-api-key": "trickydot_pdf_maker_api",
+      },
+      body: JSON.stringify({
+        url: "https://redstarpunnathala.in/report/inventory_lending",
+      }),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("not ok at response");
+        }
+        return response.blob();
+      })
+      .then((blob) => {
+        const pdfUrl = URL.createObjectURL(blob);
+        window.open(pdfUrl);
+      })
+      .catch((err) => {
+        console.log("error:" + err);
+      });
+  };
   return (
     <section className="w-full min-h-screen px-5 py-5 bg-[#f5f5f5]">
       <div className="w-full  bg-white rounded-lg shadow-md p-4 mb-4 flex  items-center justify-between ">
@@ -390,7 +415,7 @@ export default function InventoryLending() {
             </button>
 
             <button
-              onClick={() => window.open("/report/inventory_lending", "_blank")}
+              onClick={() => handlePdf()}
               className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center cursor-pointer"
             >
               <i className="bi bi-file-earmark-pdf pr-1 "></i>
