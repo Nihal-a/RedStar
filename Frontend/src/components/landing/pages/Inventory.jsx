@@ -508,7 +508,7 @@ export default function Inventory() {
                 body={(rowData) => {
                   return rowData.image ? (
                     <img
-                      src={`https://redstarpunnathala.in/media/category/${rowData.image}`}
+                      src={`https://redstarpunnathala.in/media/${rowData.image}`}
                       alt={rowData.name}
                       className="mx-auto w-10 h-10 object-cover rounded-[2px]"
                     />

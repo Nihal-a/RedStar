@@ -412,7 +412,7 @@ export default function Membership() {
                 body={(rowData) => {
                   return rowData.profile ? (
                     <img
-                      src={`https://redstarpunnathala.in/media/profile/${rowData.profile}`}
+                      src={`https://redstarpunnathala.in/media/${rowData.profile}`}
                       alt={rowData.profile}
                       className="mx-auto w-10 h-10 object-cover rounded-[6px]"
                     />
