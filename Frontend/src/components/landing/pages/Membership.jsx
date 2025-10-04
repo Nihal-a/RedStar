@@ -13,6 +13,7 @@ import { FilterMatchMode } from "primereact/api";
 import { useQuery, useMutation } from "@apollo/client/react";
 import { format } from "date-fns";
 import { GET_MEMBERSHIPS } from "../../graphql/queries";
+import { useNavigate } from "react-router-dom";
 import {
   ADD_MEMBERSHIP,
   DELETE_MEMBERSHIP,
@@ -37,13 +38,14 @@ export default function Membership() {
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [first, setFirst] = useState(0);
   const [rows, setRows] = useState(5);
-
+  const navigate = useNavigate();
   // Modal states
   const [visible, setVisible] = useState(false);
   const [renewVisible, setrenewVisible] = useState(false);
   const [editingRow, setEditingRow] = useState(null);
   const [renewRow, setrenewRow] = useState({ member: "", period: "" });
   const [originalRow, setOriginalRow] = useState(null);
+  const [renewError, setrenewError] = useState("");
   const toast = useRef(null);
 
   //Add/edit Membership
@@ -53,7 +55,7 @@ export default function Membership() {
     const year = dateObj.getFullYear();
     const month = String(dateObj.getMonth() + 1).padStart(2, "0");
     const day = String(dateObj.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`; // stays in local date
+    return `${year}-${month}-${day}`;
   }
 
   const addRow = () => {
@@ -64,7 +66,7 @@ export default function Membership() {
       profie: "",
       address: "",
       membershipid: "",
-
+      dob: "",
       _isNew: true,
     });
     setVisible(true);
@@ -74,7 +76,8 @@ export default function Membership() {
     if (
       !editingRow.name?.trim() ||
       !editingRow.address?.trim() ||
-      !editingRow.mobileNumber
+      !editingRow.mobileNumber ||
+      !editingRow.dob
     ) {
       toast.current?.show({
         severity: "warn",
@@ -83,6 +86,7 @@ export default function Membership() {
       });
       return;
     }
+
     if (!/^\d{10}$/.test(editingRow.mobileNumber)) {
       toast.current?.show({
         severity: "warn",
@@ -93,7 +97,10 @@ export default function Membership() {
     }
 
     if (!editingRow) return;
+
     try {
+      let profileBase64 = editingRow.preview || null;
+      const dob = normalizeDate(editingRow.dob);
       if (editingRow._isNew) {
         // CREATE
         await addMembership({
@@ -101,30 +108,38 @@ export default function Membership() {
             name: editingRow.name,
             address: editingRow.address,
             mobileNumber: editingRow.mobileNumber,
+            profile: profileBase64,
+            dob: dob,
           },
           refetchQueries: [{ query: GET_MEMBERSHIPS }],
           awaitRefetchQueries: true,
         });
-        setVisible(false);
-        setEditingRow(null);
+
         toast.current?.show({
           severity: "success",
           summary: "Saved",
           detail: "Member Added",
         });
       } else {
+        // UPDATE
         const updates = {};
-
         const newDate = normalizeDate(editingRow.validuntil);
         const oldDate = normalizeDate(originalRow.validuntil);
+        const newDob = editingRow.dob ? normalizeDate(editingRow.dob) : null;
+        const oldDob = originalRow.dob ? normalizeDate(originalRow.dob) : null;
+
         if (editingRow.name !== originalRow.name)
           updates.name = editingRow.name;
         if (editingRow.mobileNumber !== originalRow.mobileNumber)
           updates.mobileNumber = editingRow.mobileNumber;
         if (editingRow.address !== originalRow.address)
           updates.address = editingRow.address;
-
         if (newDate !== oldDate) updates.validuntil = newDate;
+        if (newDob !== oldDob) updates.dob = newDob;
+
+        if (editingRow.preview && editingRow.preview !== originalRow.preview) {
+          updates.profile = editingRow.preview;
+        }
 
         await updateMembership({
           variables: {
@@ -135,13 +150,15 @@ export default function Membership() {
           awaitRefetchQueries: true,
         });
 
-        setVisible(false);
         toast.current?.show({
           severity: "success",
           summary: "Saved",
           detail: "Changes saved.",
         });
       }
+
+      setVisible(false);
+      setEditingRow(null);
     } catch (err) {
       toast.current?.show({
         severity: "error",
@@ -157,7 +174,6 @@ export default function Membership() {
       message: `Delete ${rowData.name || "this person's"}'s Membership ?`,
       header: "Delete Confirmation",
       headerClassName: "pr-8",
-      // icon: "pi pi-trash text-red-600 text-[10px]",
       icon: (
         <i className="pi pi-trash text-red-600" style={{ fontSize: "18px" }} />
       ),
@@ -239,15 +255,14 @@ export default function Membership() {
     setFirst(e.first);
     setRows(e.rows);
   };
-
+  console.log(data);
   return (
     <section className="w-full min-h-screen px-5 py-5 bg-[#f5f5f5]">
       <Toast ref={toast} />
       <ConfirmDialog />
-
-      <div className="w-full  bg-white rounded-lg shadow-md p-4 mb-4 flex items-center justify-between ">
-        <div className="w-full flex flex-col md:flex-row  items-center justify-between gap-3">
-          <div>
+      <div className="w-full bg-white rounded-lg shadow-md p-4 mb-4 flex flex-col md:flex-row items-center justify-between gap-4 ">
+        <div className="flex flex-col md:flex-row items-center md:items-center justify-between w-full gap-3">
+          <div className="text-center md:text-left">
             <h1 className="font-bold md:text-start text-center md:text-[22px] text-[16px]">
               MEMBERSHIPS
             </h1>
@@ -255,7 +270,7 @@ export default function Membership() {
               Manage membership, add/edit memberships
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3 items-center justify-center md:justify-start w-full md:w-auto">
             <button
               onClick={addRow}
               className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center cursor-pointer"
@@ -269,7 +284,7 @@ export default function Membership() {
               Renew Membership
             </button>
             <button
-              // onClick={exportPDF}
+              onClick={() => window.open("/report/memberships", "_blank")}
               className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center cursor-pointer"
             >
               <i className="bi bi-file-earmark-pdf pr-1 "></i>
@@ -371,7 +386,7 @@ export default function Membership() {
                 body={(rowData) => {
                   return rowData.profile ? (
                     <img
-                      src={rowData.profile}
+                      src={`https://192.168.18.144:8000/media/${rowData.profile}`}
                       alt={rowData.profile}
                       className="mx-auto w-10 h-10 object-cover rounded-[6px]"
                     />
@@ -396,6 +411,28 @@ export default function Membership() {
                   textAlign: "center",
                 }}
               />
+              <Column
+                header="Age"
+                headerClassName="font-[poppins]"
+                alignHeader={"center"}
+                body={(rowData) => {
+                  if (!rowData.dob)
+                    return <span className="text-gray-400">N/A</span>;
+                  const dob = new Date(rowData.dob);
+                  const today = new Date();
+                  let age = today.getFullYear() - dob.getFullYear();
+                  const m = today.getMonth() - dob.getMonth();
+                  if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+                    age--;
+                  }
+                  return age;
+                }}
+                style={{
+                  width: "10%",
+                  textAlign: "center",
+                }}
+              />
+
               <Column
                 field="mobileNumber"
                 header="Contact Number"
@@ -433,7 +470,6 @@ export default function Membership() {
                 }}
                 dateFormat="dd-mm-yy"
               />
-
               <Column
                 header="Status"
                 headerClassName="font-[poppins]"
@@ -466,7 +502,7 @@ export default function Membership() {
         )}
       </div>
 
-      {/* Edit/Add Modal */}
+      {/* Edit/Add membership Modal */}
       <Dialog
         header={editingRow?._isNew ? "Add Membership" : "Edit Inventory"}
         headerClassName="!font-[poppins]"
@@ -494,18 +530,38 @@ export default function Membership() {
       >
         {editingRow && (
           <div className="flex flex-col gap-3">
-            <div>
-              <label className="block text-sm font-medium mb-1">Name*</label>
-              <InputText
-                value={editingRow.name}
-                onChange={(e) =>
-                  setEditingRow({ ...editingRow, name: e.target.value })
-                }
-                placeholder="Enter name..."
-                autoComplete="name"
-                className="w-full placeholder:text-sm !p-1.5 !font-[poppins] !px-3"
-              />
+            <div className="flex justify-between gap-2">
+              <div className="lex flex-col w-[50%] ">
+                <label className="block text-sm font-medium mb-1">Name*</label>
+                <InputText
+                  value={editingRow.name}
+                  onChange={(e) =>
+                    setEditingRow({ ...editingRow, name: e.target.value })
+                  }
+                  placeholder="Enter name..."
+                  autoComplete="name"
+                  className="w-full placeholder:text-sm !p-1.5 !font-[poppins] !px-3"
+                />
+              </div>
+              <div className="flex flex-col w-[50%] ">
+                <label className="block text-sm font-medium mb-1 !font-[poppins]">
+                  DOB*
+                </label>
+                <Calendar
+                  inputClassName="!p-1.5"
+                  placeholder="select dob"
+                  value={editingRow.dob ? new Date(editingRow.dob) : null}
+                  className=" placeholder:text-sm  !font-[poppins] !p-0"
+                  onChange={(e) =>
+                    setEditingRow({ ...editingRow, dob: e.value })
+                  }
+                  showButtonBar
+                  dateFormat="dd-mm-yy"
+                  maxDate={new Date()}
+                />
+              </div>
             </div>
+
             <div>
               <label className="block text-sm font-medium mb-1">Address</label>
               <InputText
@@ -571,13 +627,11 @@ export default function Membership() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">
-                Profile (currently disabled)
-              </label>
+              <label className="block text-sm font-medium mb-1">Profile</label>
+
               <input
                 type="file"
                 accept="image/*"
-                disabled
                 className="w-full pl-3 ring-1 rounded-sm p-1.5 ring-gray-300 "
                 onChange={(e) => {
                   const file = e.target.files?.[0];
@@ -586,19 +640,32 @@ export default function Membership() {
                     reader.onload = (ev) =>
                       setEditingRow({
                         ...editingRow,
-                        profile: ev.target.result,
+                        preview: ev.target.result,
+                        profile: file,
                       });
                     reader.readAsDataURL(file);
                   }
                 }}
               />
-              {/* {editingRow.image && (
-                <img
-                  src={resolveImageSrc(editingRow.image)}
-                  alt="preview"
-                  className="w-20 h-20 mt-2 object-cover rounded"
-                />
-              )} */}
+              {editingRow.preview ? (
+                <div className="mt-3">
+                  <img
+                    src={editingRow.preview}
+                    alt="preview"
+                    className="w-30 h-30  object-cover rounded-md border border-gray-200"
+                  />
+                </div>
+              ) : (
+                editingRow.profile && (
+                  <div className="mt-3">
+                    <img
+                      src={`https://redstarpunnathala.in/media/${editingRow.profile}`}
+                      alt="profile photo"
+                      className="w-30 h-30  object-cover rounded-md border border-gray-200"
+                    />
+                  </div>
+                )
+              )}
             </div>
           </div>
         )}
@@ -650,6 +717,7 @@ export default function Membership() {
               ]}
               placeholder="Select member name or id..."
               onChange={(e) => {
+                setrenewError("");
                 const selectedMember = data.memberships.find(
                   (mbr) => mbr.id.toString() === e.value
                 );
@@ -659,7 +727,9 @@ export default function Membership() {
                   : null;
 
                 if (currentValidity && currentValidity >= today) {
-                  alert("This member is still ACTIVE. Renewal not allowed.");
+                  setrenewError(
+                    "Have an active membership. Renewal not allowed.!"
+                  );
                   return;
                 }
                 setrenewRow({
@@ -672,6 +742,15 @@ export default function Membership() {
               }}
               className="w-full placeholder:text-sm !font-[poppins] [&_.p-dropdown-label]:!p-1.5 "
             />
+          </div>
+          <div className="w-full pl-1 h-[10px] flex items-center justify-start ">
+            <p
+              className={`font-[poppins] text-[12px] transition-all duration-200 ${
+                renewError ? "text-red-500 opacity-100" : "opacity-0"
+              }`}
+            >
+              {renewError || "Renewal not possible"}
+            </p>
           </div>
           <div className="flex flex-col w-[50%] ">
             <label className="block text-sm font-medium mb-1 !font-[poppins]">

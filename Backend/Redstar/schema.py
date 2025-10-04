@@ -1,5 +1,7 @@
 
 import graphene
+import base64
+import os
 from graphql import GraphQLError
 from graphene_django.types import DjangoObjectType
 from .models import *
@@ -10,25 +12,30 @@ import graphql_jwt
 from graphql_jwt.decorators import login_required
 from django.contrib.auth import get_user_model
 from graphene_file_upload.scalars import Upload
+from django.core.files.base import ContentFile
+from django.conf import settings
+
 
 # membershipId Generator function
+
 def MembershipIdGenerator(last_id=None):
-    prefix = "BMLIB" 
-    date_code = datetime.now().strftime("%m%y")
+    """
+    Generates a unique membership ID in the format: BMLIBmmyy-XXXX
+    The serial (XXXX) never repeats, even if month changes.
+    """
+    prefix = "BMLIB"
+    date_code = datetime.now().strftime("%m%y")  # current month-year
 
     if last_id:
-        last_prefix_date, last_serial = last_id.split("-")
-        last_date_code = last_prefix_date[len(prefix):]
-
-        if last_date_code == date_code:
-            new_serial= int(last_serial) + 1
-        else:
-            new_serial = 1 
-
+        try:
+            _, last_serial = last_id.split("-")
+            new_serial = int(last_serial) + 1
+        except Exception:
+            new_serial = 1
     else:
         new_serial = 1
-    
-    serial_str = str(new_serial).zfill(4)
+
+    serial_str = str(new_serial).zfill(4)  # pad with leading zeros
     return f"{prefix}{date_code}-{serial_str}"
 
 # -----------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -49,14 +56,6 @@ class CategoryType(DjangoObjectType):
         model = Category
         fields = ("id", "name", "image", "inventories")
 
-    # image_url = graphene.String()
-
-    # def resolve_image_url(self, info):
-    #     if self.image:
-    #         # ImageField always stores file paths, so build the full URL
-    #         return info.context.build_absolute_uri(self.image.url)
-    #     return None
-
 class InventoryLendingType(DjangoObjectType):
     class Meta:
         model = InventoryLending    
@@ -65,7 +64,7 @@ class InventoryLendingType(DjangoObjectType):
 class MembershipsType(DjangoObjectType):
     class Meta:
         model = Memberships
-        fields = ("id", "membershipId", "name", "profile", "mobileNumber", "address", "validuntil")
+        fields = ("id", "membershipId", "name", "dob", "profile", "mobileNumber", "address", "validuntil")
 
 class BookType(DjangoObjectType):
     class Meta:
@@ -122,7 +121,7 @@ class Query(graphene.ObjectType):
             "inventories": Inventory.objects.count(),
             "issuedInvCurrently": Inventory.objects.filter(status=False).count(),
             "issuedInvTill": InventoryLending.objects.count(),
-            "books": total_books,  # <-- pass the integer
+            "books": total_books,  
             "issuedBooksCurrently": BooksLending.objects.filter(status=False).count(),
             "issuedBooksTill": BooksLending.objects.count(),
             "memberships" :Memberships.objects.count(),
@@ -137,7 +136,31 @@ schema = graphene.Schema(query=Query)
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # ------------------------------------MUTATIONS----------------------------------------------------------------------------------------------------------------------
 
+class ChangePassword(graphene.Mutation):
+    class Arguments:
+        old_password = graphene.String(required=True)
+        new_password = graphene.String(required=True)
+        confirm_password = graphene.String(required=True)
 
+    success = graphene.Boolean()
+    message = graphene.String()
+
+    def mutate(self, info, old_password, new_password, confirm_password):
+        user = info.context.user
+
+        if user.is_anonymous:
+            raise GraphQLError("You must be logged in to change password.")
+        
+        if not user.check_password(old_password):
+            raise GraphQLError("Old password is incorrect.")
+
+        if new_password != confirm_password:
+            raise GraphQLError("New passwords do not match.")
+
+        user.set_password(new_password)
+        user.save()
+
+        return ChangePassword(success=True, message="Password changed successfully.")
 
 class CreateInventory(graphene.Mutation):
     class Arguments:
@@ -154,6 +177,7 @@ class CreateInventory(graphene.Mutation):
     
         inventory = Inventory.objects.create(name=name, category=category_obj,  )
         return CreateInventory(inventory=inventory)
+
     
 class UpdateInventory(graphene.Mutation):
     class Arguments:
@@ -199,34 +223,63 @@ class CreateCategory(graphene.Mutation):
     category = graphene.Field(CategoryType)
     
     def mutate(self, info, name, image=None):
-        
-        
+        image_file = None
+
+        if image:
+            if image.startswith("data:image"):
+                format, imgstr = image.split(";base64,")
+                ext = format.split("/")[-1]
+                decoded_img = base64.b64decode(imgstr)
+
+                max_size = 2 * 1024 * 1024  # 2 MB
+                if len(decoded_img) > max_size:
+                    raise GraphQLError("Image file size must be under 2MB")
+                
+                image_file = ContentFile(decoded_img, name=f"{name}.{ext}")
+            else:
+                raise GraphQLError("Invalid image format")
+            
         if Category.objects.filter(name__iexact=name).exists():
             raise GraphQLError(f"Category with name '{name}' already exists.")
-        
-        # Create the category
+
         category = Category.objects.create(
-            name=name, 
-            image=image
+            name=name,
+            image=image_file
         )
         
         return CreateCategory(category=category)
-    
+
 class UpdateCategory(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
         name = graphene.String()
+        image = graphene.String() 
 
     category = graphene.Field(CategoryType)
 
-    def mutate(root, info, id, name=None):
-        category = Category.objects.get(pk=int(id))
+    def mutate(root, info, id, name=None, image=None):
+        try:
+            category = Category.objects.get(pk=int(id))
+        except Category.DoesNotExist:
+            raise GraphQLError("Category not found")
+
         if name is not None:
-            category.name=name
-        
+            category.name = name
+
+        if image:
+            if category.image and os.path.isfile(category.image.path):
+                os.remove(category.image.path)
+
+            if image.startswith("data:image"):
+                format, imgstr = image.split(";base64,")
+                ext = format.split("/")[-1]
+                category.image = ContentFile(base64.b64decode(imgstr), name=f"{category.name}.{ext}")
+            else:
+                raise GraphQLError("Invalid image format")
+
         category.save()
         return UpdateCategory(category=category)
-    
+
 class DeleteCategory(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
@@ -236,10 +289,17 @@ class DeleteCategory(graphene.Mutation):
     def mutate(self, info, id):
         try:
             category = Category.objects.get(pk=id)
+            
+            if category.image:
+                image_path = os.path.join(settings.MEDIA_ROOT, str(category.image))
+                if os.path.exists(image_path):
+                    os.remove(image_path)
+
             category.delete()
             return DeleteCategory(ok=True)
         except Category.DoesNotExist:
             return DeleteCategory(ok=False)
+
 
 
 class AddInventoryLending(graphene.Mutation):
@@ -353,48 +413,85 @@ class DeleteInventoryLending(graphene.Mutation):
     
 class AddMembership(graphene.Mutation):
     class Arguments:
-        name = graphene.String(required = True)
-        address = graphene.String(required = True)
-        mobileNumber = graphene.String(required = True)
-        profile =graphene.String()
-
+        name = graphene.String(required=True)
+        address = graphene.String(required=True)
+        mobileNumber = graphene.String(required=True)
+        profile = graphene.String()
+        dob =graphene.Date(required=True) 
 
     memberships = graphene.Field(MembershipsType)
 
-    def mutate(root, info, name, address, mobileNumber ):
+    def mutate(root, info, name, address, mobileNumber, dob, profile=None, ):
+        image_file = None
+
+        if profile:
+            if profile.startswith("data:image"):
+                format, imgstr = profile.split(";base64,")
+                ext = format.split("/")[-1]
+                decoded_img = base64.b64decode(imgstr)
+
+                max_size = 2 * 1024 * 1024  # 2 MB
+                if len(decoded_img) > max_size:
+                    raise GraphQLError("Image file size must be under 2MB")
+
+                image_file = ContentFile(decoded_img, name=f"{name}.{ext}")
+            else:
+                raise GraphQLError("Invalid image format")
 
         last_obj = Memberships.objects.order_by("-membershipId").first()
         if last_obj:
-            membershipId=MembershipIdGenerator(last_obj.membershipId)
+            membershipId = MembershipIdGenerator(last_obj.membershipId)
         else:
-            membershipId=MembershipIdGenerator()
-
+            membershipId = MembershipIdGenerator()
         validuntil_date = date.today() + timedelta(days=365)
-        memberships = Memberships.objects.create(name=name, address=address, mobileNumber=mobileNumber, membershipId=membershipId, validuntil=validuntil_date)
+
+        memberships = Memberships.objects.create(
+            name=name,
+            address=address,
+            mobileNumber=mobileNumber,
+            membershipId=membershipId,
+            validuntil=validuntil_date,
+            profile=image_file,
+            dob=dob  
+        )
+
         return AddMembership(memberships=memberships)
-    
+
 
 class UpdateMembership(graphene.Mutation):
     class Arguments:
-        id = graphene.ID(required = True)
+        id = graphene.ID(required=True)
         name = graphene.String()
         address = graphene.String()
         mobileNumber = graphene.String()
-        profile =graphene.String()
-        validuntil =graphene.Date()
-
+        profile = graphene.String()  # base64 image
+        validuntil = graphene.Date()
+        dob = graphene.Date()
 
     memberships = graphene.Field(MembershipsType)
 
-    def mutate(root, info, id, **kwargs ):
+    def mutate(root, info, id, **kwargs):
         memberships = Memberships.objects.get(pk=int(id))
 
+        profile_data = kwargs.pop("profile", None)
+        if profile_data:
+            if memberships.profile and os.path.isfile(memberships.profile.path):
+                os.remove(memberships.profile.path)
+
+            if profile_data.startswith("data:image"):
+                format, imgstr = profile_data.split(";base64,")
+                ext = format.split("/")[-1]
+                memberships.profile = ContentFile(base64.b64decode(imgstr), name=f"{memberships.name}.{ext}")
+            else:
+                raise GraphQLError("Invalid image format")
+
         for field, value in kwargs.items():
-            if value is not None: 
+            if value is not None:
                 setattr(memberships, field, value)
-        
+
         memberships.save()
         return UpdateMembership(memberships=memberships)
+
     
 
 
@@ -418,14 +515,15 @@ class DeleteMembership(graphene.Mutation):
     ok = graphene.Boolean()
 
     def mutate(self, info, id):
-        
         try:
             membership = Memberships.objects.get(pk=id)
+            if membership.profile and os.path.isfile(membership.profile.path):
+                os.remove(membership.profile.path)
+        
             membership.delete()
             return DeleteMembership(ok=True)
         except Memberships.DoesNotExist:
             return DeleteMembership(ok=False)
-
     
 class CreateBook(graphene.Mutation):
     class Arguments:
@@ -639,21 +737,6 @@ class DeleteBookLending(graphene.Mutation):
 
 
 
-class UploadFile(graphene.Mutation):
-    class Arguments:
-        file = Upload(required=True)
-
-    ok = graphene.Boolean()
-    file_url = graphene.String()
-
-    def mutate(root, info, file, **kwargs):
-        # Save file manually (example: MEDIA folder)
-        with open(f"media/{file.name}", "wb+") as destination:
-            for chunk in file.chunks():
-                destination.write(chunk)
-
-        return UploadFile(ok=True, file_url=f"/media/{file.name}")
-
 
 class Mutation(graphene.ObjectType):
 
@@ -664,6 +747,8 @@ class Mutation(graphene.ObjectType):
     revoke_token = graphql_jwt.Revoke.Field()
     delete_refresh_token_cookie = \
         graphql_jwt.relay.DeleteRefreshTokenCookie.Field()
+
+    change_password = ChangePassword.Field()
 
     create_inventory = CreateInventory.Field()
     update_inventory = UpdateInventory.Field()
@@ -692,6 +777,5 @@ class Mutation(graphene.ObjectType):
     return_book_lending = ReturnBookLending.Field()
     delete_book_lending = DeleteBookLending.Field()
 
-    upload_file = UploadFile.Field()
 
 schema = graphene.Schema(query=Query, mutation=Mutation)

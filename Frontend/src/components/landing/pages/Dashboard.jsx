@@ -10,7 +10,6 @@ const Dashboard = () => {
 
   return (
     <section className="w-full h-full lg:px-5 px-3.5 lg:py-5 py-3 bg-[#f5f5f5] flex flex-col ">
-      {/* Top Bar */}
       <div className="w-full bg-white rounded-lg shadow-md p-6 flex items-center justify-between">
         <p className="font-[poppins] font-bold md:text-[22px] text-[16px]">
           DASHBOARD
@@ -18,7 +17,7 @@ const Dashboard = () => {
       </div>
 
       {/* Dashboard Cards */}
-      <div className=" rounded-lg  p-4 w-full grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3  mt-3 ">
+      <div className=" rounded-lg w-full grid grid-cols md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:-cols-4 gap-3  mt-4">
         {loading || error ? (
           loading ? (
             <p>Loading dashboard...</p>
@@ -30,37 +29,37 @@ const Dashboard = () => {
             <DashboardCard
               main_head="INVENTORY"
               number={data?.counts?.inventories}
-              sub_head="Total number of inventory."
+              sub_head="Total inventory."
               icon="box-seam"
             />
             <DashboardCard
-              main_head="TOTAL ISSUED INVENTORY"
+              main_head="ISSUED INVENTORY"
               number={data?.counts?.issuedInvTill}
-              sub_head="Total number of people helped by our inventories so far."
+              sub_head="Total isssued."
               icon="check2-circle"
             />
             <DashboardCard
-              main_head="ISSUED INVENTORIES CURRENTLY"
+              main_head="ISSUED INVENTORIES TILL"
               number={data?.counts?.issuedInvCurrently}
-              sub_head="Total number of inventories actively helping people"
+              sub_head="issued currently."
               icon="check2-circle"
             />
             <DashboardCard
               main_head="BOOKS"
               number={data?.counts?.books}
-              sub_head="Total number of books."
+              sub_head="Total Books."
               icon="collection"
             />
             <DashboardCard
-              main_head="TOTAL ISSUED BOOKS"
+              main_head="ISSUED BOOKS"
               number={data?.counts?.issuedBooksTill}
-              sub_head="Total number of books lent out up to today."
+              sub_head="Total isssued books."
               icon="check2-circle"
             />
             <DashboardCard
               main_head="ISSUED BOOKS CURRENTLY"
               number={data?.counts?.issuedBooksCurrently}
-              sub_head="Total number of books lent out currently."
+              sub_head="Total issued books currently."
               icon="journal-check"
             />
             <DashboardCard
@@ -69,12 +68,7 @@ const Dashboard = () => {
               sub_head="Total number of memberships."
               icon="journal-check"
             />
-            <DashboardCard
-              main_head="FUND"
-              number="1000"
-              sub_head="Available fund."
-              icon="wallet2"
-            />
+            
           </>
         )}
       </div>

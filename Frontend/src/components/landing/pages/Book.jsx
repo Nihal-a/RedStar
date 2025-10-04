@@ -201,14 +201,40 @@ export default function Book() {
     setRows(e.rows);
   };
 
+  //pdf handling function
+  const handlePdf = async () => {
+    fetch("https://pdf.trickydot.com/url", {
+      method: "POST",
+      headers: {
+        "Content-type": "application/json",
+        "x-api-key": "trickydot_pdf_maker_api",
+      },
+      body: JSON.stringify({
+        url: "https://redstarpunnathala.in/report/books",
+      }),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("not ok at response");
+        }
+        return response.blob();
+      })
+      .then((blob) => {
+        const pdfUrl = URL.createObjectURL(blob);
+        window.open(pdfUrl);
+      })
+      .catch((err) => {
+        console.log("error:" + err);
+      });
+  };
 
   return (
     <section className="w-full min-h-screen px-5 py-5 bg-[#f5f5f5]">
       <Toast ref={toast} />
       <ConfirmDialog />
-      <div className="w-full  bg-white rounded-lg shadow-md p-4 mb-4 flex  items-center justify-between ">
-        <div className="w-full flex flex-col md:flex-row items-center justify-between gap-3">
-          <div className="">
+      <div className="w-full bg-white rounded-lg shadow-md p-4 mb-4 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="flex flex-col md:flex-row items-center md:items-center justify-between w-full gap-3">
+          <div className="text-center md:text-left">
             <h1 className="text-xl font-bold md:text-start text-center ">
               BOOKS
             </h1>
@@ -216,7 +242,7 @@ export default function Book() {
               Manage books, add/edit books
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3 items-center justify-center md:justify-start w-full md:w-auto">
             <button
               onClick={addRow}
               className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center cursor-pointer"
@@ -225,7 +251,10 @@ export default function Book() {
             </button>
             <button
               className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center cursor-pointer"
-              // onClick={handlePrintPdf}
+              onClick={() => {
+                window.open("/report/books", "_blank");
+                handlePdf();
+              }}
             >
               <i className="bi bi-file-earmark-pdf pr-1 "></i>
               Export pdf
@@ -473,7 +502,7 @@ export default function Book() {
                 onValueChange={(e) =>
                   setEditingRow({ ...editingRow, count: e.value ?? 0 })
                 }
-                inputClassName="!p-1.5 !px-3"
+                inputClassName="!p-1.5 !px-3 w-full"
                 className="w-full placeholder:text-sm  !font-[poppins] "
                 min={0}
                 showButtons

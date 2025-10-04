@@ -2,6 +2,7 @@ import { Route, Routes } from "react-router-dom";
 import Signin from "./components/Signin";
 import Home from "./components/landing/Home";
 import PrivateRoute from "./PrivateRoute";
+import PdfTemplate from "./components/utils/PdfTemplate";
 
 function App() {
   return (
@@ -12,6 +13,14 @@ function App() {
         element={
           <PrivateRoute>
             <Home />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/report/:type"
+        element={
+          <PrivateRoute>
+            <PdfTemplate />
           </PrivateRoute>
         }
       />

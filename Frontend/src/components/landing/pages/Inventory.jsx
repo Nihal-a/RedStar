@@ -4,7 +4,6 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
-import { InputNumber } from "primereact/inputnumber";
 import { Toast } from "primereact/toast";
 import { ConfirmDialog, confirmDialog } from "primereact/confirmdialog";
 import { Dialog } from "primereact/dialog";
@@ -20,7 +19,6 @@ import {
   UPDATE_CATEGORY,
   UPDATE_INVENTORY,
 } from "../../graphql/mutations";
-import { useNavigate } from "react-router-dom";
 
 export default function Inventory() {
   //queries
@@ -51,7 +49,6 @@ export default function Inventory() {
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [first, setFirst] = useState(0);
   const [rows, setRows] = useState(5);
-  const navigate = useNavigate();
 
   //Category modal States
   const [categoryModalVisible, setcategoryModalVisible] = useState(false);
@@ -67,8 +64,16 @@ export default function Inventory() {
 
   //Detailedview of products each category modal states
   const [detaledViewModal, setdetaledViewModal] = useState(false);
-
   const toast = useRef(null);
+
+  //for hidden input functions while updating image
+  const fileInputRef = useRef(null);
+
+  const [updatingCategoryImage, setUpdatingCategoryImage] = useState({
+    id: null,
+    file: null,
+    preview: null,
+  });
 
   //create inventory
   const saveRow = async () => {
@@ -96,6 +101,7 @@ export default function Inventory() {
         summary: "Saved",
         detail: "Inventory Added Succesfully",
       });
+      setVisible(false);
     } catch (err) {
       toast.current?.show({
         severity: "error",
@@ -106,6 +112,15 @@ export default function Inventory() {
   };
 
   //For create Category
+  const convertToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
   const saveCategory = async () => {
     if (!categoryRow.name?.trim()) {
       toast.current?.show({
@@ -115,24 +130,31 @@ export default function Inventory() {
       });
       return;
     }
+
     if (!categoryRow) return;
+
+    let convertedImage = null;
+
+    if (categoryRow.image) {
+      convertedImage = await convertToBase64(categoryRow.image);
+    }
+
     try {
-      if (categoryRow) {
-        await createCategory({
-          variables: { name: categoryRow.name, image: categoryRow.image },
-          refetchQueries: [
-            { query: GET_CATEGORIES },
-            { query: GET_INVENTORIES },
-          ],
-          awaitRefetchQueries: true,
-        });
-        setcategoryRow({ name: "", image: null });
-        toast.current?.show({
-          severity: "success",
-          summary: "Saved",
-          detail: "Category Added",
-        });
-      }
+      await createCategory({
+        variables: {
+          name: categoryRow.name,
+          image: convertedImage,
+        },
+        refetchQueries: [{ query: GET_CATEGORIES }, { query: GET_INVENTORIES }],
+        awaitRefetchQueries: true,
+      });
+
+      setcategoryRow({ name: "", image: null });
+      toast.current?.show({
+        severity: "success",
+        summary: "Saved",
+        detail: "Category Added",
+      });
     } catch (err) {
       toast.current?.show({
         severity: "error",
@@ -142,7 +164,7 @@ export default function Inventory() {
     }
   };
 
-  //For upddating category (Inline edit)
+  //For updating category (Inline edit)
   const UpdateCategoryDetails = async (e) => {
     try {
       const changes = {};
@@ -159,9 +181,37 @@ export default function Inventory() {
         toast.current?.show({
           severity: "success",
           summary: "Updated",
-          detail: "Inventory updated successfully",
+          detail: "Category updated successfully",
         });
       }
+    } catch (err) {
+      toast.current?.show({
+        severity: "error",
+        summary: "Error",
+        detail: err.message,
+      });
+    }
+  };
+
+  const updateCategoryImage = async (categoryId, file) => {
+    if (!file) return;
+
+    try {
+      const base64Image = await convertToBase64(file);
+      await updateCategory({
+        variables: { id: categoryId, image: base64Image },
+        refetchQueries: [{ query: GET_CATEGORIES }],
+      });
+
+      toast.current?.show({
+        severity: "success",
+        summary: "Updated",
+        detail: "Category image updated successfully",
+      });
+
+      // Reset after success
+      setUpdatingCategoryImage({ id: null, file: null, preview: null });
+      fileInputRef.current.value = null;
     } catch (err) {
       toast.current?.show({
         severity: "error",
@@ -203,7 +253,7 @@ export default function Inventory() {
   //For deletion of both catgory and inventory
   const confirmDelete = (rowData, type) => {
     confirmDialog({
-      message: `Delete "${rowData.name || "this item"}"? ${type}`,
+      message: `Delete "${rowData.name || "this item"}"?`,
       header: "Delete Confirmation",
       headerClassName: "pr-8",
       icon: (
@@ -297,11 +347,7 @@ export default function Inventory() {
     setRows(e.rows);
   };
 
-  const exportPdf = () => {
-
-
-
-  };
+  const exportPdf = () => {};
 
   //for inline edit text editor openup a inut field
   const textEditor = (options) => {
@@ -343,7 +389,7 @@ export default function Inventory() {
             </button>
             <button
               className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center flex-shrink-0"
-              onClick={exportPdf}
+              onClick={() => window.open("/report/inventory", "_blank")}
             >
               <i className="bi bi-file-earmark-pdf pr-1"></i>
               Export pdf
@@ -430,15 +476,15 @@ export default function Inventory() {
                 }}
               />
 
-              {/* <Column
+              <Column
                 header="Image"
                 headerClassName="uppercase"
                 body={(rowData) => {
                   return rowData.image ? (
                     <img
-                      src={rowData.image}
+                      src={`redstarpunnathala.ina/media/${rowData.image}`}
                       alt={rowData.name}
-                      className="mx-auto w-10 h-10 object-cover rounded-[6px]"
+                      className="mx-auto w-10 h-10 object-cover rounded-[2px]"
                     />
                   ) : (
                     <span className="text-gray-400">No Image</span>
@@ -450,7 +496,7 @@ export default function Inventory() {
                   // width: "10%",
                   textAlign: "center",
                 }}
-              /> */}
+              />
 
               <Column
                 field="name"
@@ -608,13 +654,18 @@ export default function Inventory() {
         draggable={false}
         className="w-[90%] lg:w-[40%] md:w-[50%] sm:w-[50%]"
         modal
-        onHide={() => setcategoryModalVisible(false)}
+        onHide={() => {
+          fileInputRef.current.value = null;
+          setUpdatingCategoryImage({ id: null, file: null, preview: null });
+          setcategoryModalVisible(false);
+        }}
       >
         <div className="w-full flex flex-col gap-1">
           <div className="w-full">
             <label className="block text-sm font-medium mb-1">
               Category Name*
             </label>
+
             <div className="w-full flex">
               <InputText
                 value={categoryRow.name}
@@ -632,7 +683,7 @@ export default function Inventory() {
                 Add
               </button>
             </div>
-            {/* <div className="mt-3">
+            <div className="mt-3">
               <label className="block text-sm font-medium mb-1">
                 Product Image
               </label>
@@ -651,25 +702,46 @@ export default function Inventory() {
                       reader.onload = (ev) =>
                         setcategoryRow({
                           ...categoryRow,
-                          image: ev.target?.result,
+                          preview: ev.target?.result,
+                          image: file,
                         });
                       reader.readAsDataURL(file);
                     }
                   }}
                 />
               </label>
-              {categoryRow.image && (
+              {categoryRow.preview && (
                 <div className="mt-3">
                   <img
-                    src={categoryRow.image}
+                    src={categoryRow.preview}
                     alt="preview"
                     className="w-25 h-25 sm:w-30 sm:h-30 object-cover rounded-md border border-gray-200"
                   />
                 </div>
               )}
-            </div> */}
+              {updatingCategoryImage.preview && (
+                <div className="mt-3 flex flex-col items-start gap-2">
+                  <img
+                    src={updatingCategoryImage.preview}
+                    alt="preview"
+                    className="w-25 h-25 sm:w-30 sm:h-30 object-cover rounded-md border border-gray-200"
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateCategoryImage(
+                        updatingCategoryImage.id,
+                        updatingCategoryImage.file
+                      )
+                    }
+                    className="px-4 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700"
+                  >
+                    Save Image
+                  </button>
+                </div>
+              )}
+            </div>
             <div className="mt-4 flex justify-end">
-              {" "}
               <div className="relative ">
                 <input
                   value={categoryModalFilterValue}
@@ -681,6 +753,27 @@ export default function Inventory() {
                 <i className="bi bi-search  absolute left-[10px] top-[50%] translate-y-[-50%] text-[14px] text-black"></i>
               </div>
             </div>
+            {/* for update image hidden input */}
+            <input
+              type="file"
+              accept="image/*"
+              ref={fileInputRef}
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file && updatingCategoryImage.id) {
+                  const reader = new FileReader();
+                  reader.onload = (ev) => {
+                    setUpdatingCategoryImage({
+                      ...updatingCategoryImage,
+                      file,
+                      preview: ev.target.result,
+                    });
+                  };
+                  reader.readAsDataURL(file);
+                }
+              }}
+            />
           </div>
           {categoryLoading || categoryError ? (
             categoryLoading ? (
@@ -737,16 +830,30 @@ export default function Inventory() {
                   alignHeader={"center"}
                   headerClassName="font-[poppins] "
                   body={(rowData) => (
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 justify-center">
                       <i
-                        className="bi bi-trash  cursor-pointer text-red-500 p-2 rounded bg-red-100"
+                        className="bi bi-trash cursor-pointer text-red-500 p-2 rounded bg-red-100"
                         onClick={() => confirmDelete(rowData, "category")}
                       ></i>
+
+                      <div className="flex gap-2">
+                        <i
+                          className="bi bi-image cursor-pointer text-green-500 p-2 rounded bg-green-100"
+                          onClick={() => {
+                            setUpdatingCategoryImage({
+                              id: rowData.id,
+                              file: null,
+                              preview: null,
+                            });
+                            fileInputRef.current.click();
+                          }}
+                        ></i>
+                      </div>
                     </div>
                   )}
                   bodyStyle={{ alignContent: "center" }}
                   style={{
-                    width: "10%",
+                    width: "20%",
                     textAlign: "center",
                   }}
                 />

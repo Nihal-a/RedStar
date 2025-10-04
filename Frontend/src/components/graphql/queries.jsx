@@ -94,6 +94,7 @@ export const GET_MEMBERSHIPS = gql`
       profile
       mobileNumber
       validuntil
+      dob
     }
   }
 `;

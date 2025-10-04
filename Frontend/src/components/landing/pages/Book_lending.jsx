@@ -274,8 +274,6 @@ export default function BookLending() {
     setGlobalFilterValue(value);
   };
 
-
-
   //for when adding new coloumn new added will be listed at last
   const onPage = (e) => {
     setFirst(e.first);
@@ -283,9 +281,9 @@ export default function BookLending() {
   };
   return (
     <section className="w-full min-h-screen px-5 py-5 bg-[#f5f5f5]">
-      <div className="w-full  bg-white rounded-lg shadow-md p-4 mb-4 flex  items-center justify-between ">
-        <div className="w-full flex flex-col md:flex-row items-center justify-between gap-3">
-          <div className="">
+      <div className="w-full bg-white rounded-lg shadow-md p-4 mb-4 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="flex flex-col md:flex-row items-center md:items-center justify-between w-full gap-3">
+          <div className="text-center md:text-left">
             <h1 className="font-bold md:text-start text-center md:text-[22px] text-[16px]">
               BOOKS LENDING
             </h1>
@@ -293,7 +291,7 @@ export default function BookLending() {
               Manage books lents, add/edit lents
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3 items-center justify-center md:justify-start w-full md:w-auto">
             <button
               onClick={addRow}
               className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[rgb(224,21,20)] hover:bg-[#ff2828] flex items-center justify-center cursor-pointer"
@@ -301,14 +299,7 @@ export default function BookLending() {
               Add Record
             </button>
             <button
-              onClick={() =>
-                navigate("/printpdf/book_lending", {
-                  state: {
-                    data: loading ? [] : data.books,
-                    head: "Book Lending Report",
-                  },
-                })
-              }
+              onClick={() => window.open("/report/book_lending", "_blank")}
               className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center cursor-pointer"
             >
               <i className="bi bi-file-earmark-pdf pr-1 "></i>
@@ -361,7 +352,7 @@ export default function BookLending() {
                   setFilters(_filters);
                 }}
                 placeholder="Filter by Status "
-                className="w-35 text-sm [&_.p-dropdown-label]:!p-1.5"
+                className="md:w-35 w-25  text-sm [&_.p-dropdown-label]:!p-1.5"
               />
             </div>
 

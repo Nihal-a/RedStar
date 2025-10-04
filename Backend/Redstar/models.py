@@ -42,7 +42,7 @@ class User(AbstractBaseUser,PermissionsMixin):
 
 class Category(models.Model):
     name = models.CharField( max_length=100, null=False)
-    image = models.TextField(blank=True, null=True)
+    image = models.ImageField(upload_to='category/')
 
 class Inventory(models.Model):
     name = models.CharField(max_length=100,null=False, blank=False)
@@ -62,7 +62,8 @@ class InventoryLending(models.Model):
 class Memberships(models.Model):
     membershipId = models.CharField(max_length=120,blank=True,null=True) 
     name = models.CharField(max_length=100, null=False, blank=False)
-    profile = models.TextField(blank=True, null=True)
+    profile = models.ImageField(upload_to='profile/')
+    dob = models.DateField(null=False, blank=False)
     address = models.CharField(max_length=200, null=False, blank=False)
     mobileNumber = models.CharField(max_length=15, null=False, blank=False)
     validuntil = models.DateField(null=False, blank=False)

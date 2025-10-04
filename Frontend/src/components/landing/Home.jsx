@@ -5,24 +5,18 @@ import Inventory from "./pages/Inventory";
 import InventoryLending from "./pages/Inventory_lending";
 import Book from "./pages/Book";
 import BookLending from "./pages/Book_lending";
-import Finance from "./pages/Finance";
-import Reports from "./pages/Reports";
-import Bin from "./pages/Bin";
 import Membership from "./pages/Membership";
 import redstar_logo from "../../assets/redstar_logo.svg";
 import { Button } from "primereact/button";
 import { Sidebar } from "primereact/sidebar";
 import { useNavigate } from "react-router-dom";
 import { Dialog } from "primereact/dialog";
+import { useMutation } from "@apollo/client/react";
 import {
   DELETE_REFRESH_TOKEN_COOKIE_MUTATION,
   DELETE_TOKEN_COOKIE_MUTATION,
-  REFRESH_MUTATION,
   REVOKE_TOKEN_MUTATION,
-  VERIFY_MUTATION,
 } from "../graphql/mutations";
-
-import { useMutation } from "@apollo/client/react";
 
 const Home = () => {
   const [selectedMenu, setselectedMenu] = useState("HOME");
@@ -68,10 +62,7 @@ const Home = () => {
     INVENTORY_LENDING: <InventoryLending />,
     BOOK: <Book />,
     BOOK_LENDING: <BookLending />,
-    FINANCE: <Finance />,
     MEMBERSHIP: <Membership />,
-    REPORTS: <Reports />,
-    BIN: <Bin />,
   };
 
   return (

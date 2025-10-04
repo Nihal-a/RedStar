@@ -52,6 +52,23 @@ export const REVOKE_TOKEN_MUTATION = gql`
     }
   }
 `;
+export const CHANGE_PASS = gql`
+  mutation ChangePassword(
+    $oldPassword: String!
+    $newPassword: String!
+    $confirmPassword: String!
+  ) {
+    changePassword(
+      oldPassword: $oldPassword
+      newPassword: $newPassword
+      confirmPassword: $confirmPassword
+    ) {
+      success
+      message
+    }
+  }
+`;
+
 //-------------------------CATEGORY MANAGMENT-----------------------------------------------------------------------------------------------------------------
 
 export const CREATE_CATEGORY = gql`
@@ -67,11 +84,12 @@ export const CREATE_CATEGORY = gql`
 `;
 
 export const UPDATE_CATEGORY = gql`
-  mutation UpdateCategory($id: ID!, $name: String) {
-    updateCategory(id: $id, name: $name) {
+  mutation UpdateCategory($id: ID!, $name: String, $image: String) {
+    updateCategory(id: $id, name: $name, image: $image) {
       category {
         id
         name
+        image
       }
     }
   }
@@ -252,12 +270,14 @@ export const ADD_MEMBERSHIP = gql`
     $address: String!
     $mobileNumber: String!
     $profile: String
+    $dob: Date!
   ) {
     addMembership(
       name: $name
       address: $address
       mobileNumber: $mobileNumber
       profile: $profile
+      dob: $dob
     ) {
       memberships {
         name
@@ -265,6 +285,7 @@ export const ADD_MEMBERSHIP = gql`
         mobileNumber
         membershipId
         validuntil
+        dob
       }
     }
   }
@@ -278,6 +299,7 @@ export const UPDATE_MEMBERSHIP = gql`
     $mobileNumber: String
     $profile: String
     $validuntil: Date
+    $dob: Date
   ) {
     updateMembership(
       id: $id
@@ -286,6 +308,7 @@ export const UPDATE_MEMBERSHIP = gql`
       mobileNumber: $mobileNumber
       profile: $profile
       validuntil: $validuntil
+      dob: $dob
     ) {
       memberships {
         id
@@ -294,6 +317,7 @@ export const UPDATE_MEMBERSHIP = gql`
         mobileNumber
         profile
         validuntil
+        dob
       }
     }
   }
