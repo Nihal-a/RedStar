@@ -211,7 +211,7 @@ const PdfTemplate = () => {
   }
 
   return (
-    <div className="flex justify-center">
+    <div className="flex justify-center pdf-wrapper">
       <div className="relative w-[210mm] h-screen text-[poppins]">
         {/* Header */}
         <div className="header fixed top-0 w-[210mm] h-[60mm] bg-[#f8f8f8] flex flex-col px-[10mm]">

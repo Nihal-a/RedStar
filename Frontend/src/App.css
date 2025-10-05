@@ -7,8 +7,12 @@
 }
 
 @media print {
-  body {
-    background: red !important;
+  .pdf-wrapper {
+    background-color: red !important;
+    height: 100%;
+    width: 100%;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 }
 
