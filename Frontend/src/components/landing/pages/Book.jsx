@@ -201,7 +201,6 @@ export default function Book() {
     setRows(e.rows);
   };
 
-
   return (
     <section className="w-full min-h-screen px-5 py-5 bg-[#f5f5f5]">
       <Toast ref={toast} />
@@ -225,7 +224,13 @@ export default function Book() {
             </button>
             <button
               className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center cursor-pointer"
-             onClick={() => navigate("api/pdfprint/books")}
+              onClick={() =>
+                window.open(
+                  "https://redstarpunnathala.in/api/pdfprint/books",
+                  "_blank",
+                  "noopener,noreferrer"
+                )
+              }
             >
               <i className="bi bi-file-earmark-pdf pr-1 "></i>
               Export pdf

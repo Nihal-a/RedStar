@@ -389,7 +389,13 @@ export default function InventoryLending() {
             </button>
 
             <button
-              onClick={() => navigate("api/pdfprint/inventory_lending")}
+              onClick={() =>
+                window.open(
+                  "https://redstarpunnathala.in/api/pdfprint/inventory_lending",
+                  "_blank",
+                  "noopener,noreferrer"
+                )
+              }
               className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center cursor-pointer"
             >
               <i className="bi bi-file-earmark-pdf pr-1 "></i>

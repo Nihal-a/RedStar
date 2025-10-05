@@ -280,7 +280,6 @@ export default function BookLending() {
     setRows(e.rows);
   };
 
- 
   return (
     <section className="w-full min-h-screen px-5 py-5 bg-[#f5f5f5]">
       <div className="w-full bg-white rounded-lg shadow-md p-4 mb-4 flex flex-col md:flex-row items-center justify-between gap-4">
@@ -301,7 +300,13 @@ export default function BookLending() {
               Add Record
             </button>
             <button
-              onClick={() => navigate("api/pdfprint/book_lending")}
+              onClick={() =>
+                window.open(
+                  "https://redstarpunnathala.in/api/pdfprint/book_lending",
+                  "_blank",
+                  "noopener,noreferrer"
+                )
+              }
               className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center cursor-pointer"
             >
               <i className="bi bi-file-earmark-pdf pr-1 "></i>
