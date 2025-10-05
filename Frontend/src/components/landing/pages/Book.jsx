@@ -230,8 +230,14 @@ export default function Book() {
                   "_blank",
                   "noopener,noreferrer"
                 );
-                pdfWindow.location.href =
-                  "https://redstarpunnathala.in/api/pdfprint/books";
+                if (pdfWindow) {
+                  pdfWindow.location.href =
+                    "https://redstarpunnathala.in/api/pdfprint/books";
+                } else {
+                  alert(
+                    "Please allow pop-ups in your browser to view the PDF."
+                  );
+                }
               }}
             >
               <i className="bi bi-file-earmark-pdf pr-1 "></i>
