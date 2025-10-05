@@ -391,14 +391,11 @@ export default function InventoryLending() {
             <button
               onClick={() => {
                 const pdfWindow = window.open(
-                  "",
+                  "https://redstarpunnathala.in/api/pdfprint/inventory_lending",
                   "_blank",
                   "noopener,noreferrer"
                 );
-                if (pdfWindow) {
-                  pdfWindow.location.href =
-                    "https://redstarpunnathala.in/api/pdfprint/inventory_lending";
-                } else {
+                if (!pdfWindow) {
                   alert(
                     "Please allow pop-ups in your browser to view the PDF."
                   );

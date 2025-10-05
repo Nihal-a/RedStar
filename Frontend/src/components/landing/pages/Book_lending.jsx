@@ -302,14 +302,11 @@ export default function BookLending() {
             <button
               onClick={() => {
                 const pdfWindow = window.open(
-                  "",
+                  "https://redstarpunnathala.in/api/pdfprint/book_lending",
                   "_blank",
                   "noopener,noreferrer"
                 );
-                if (pdfWindow) {
-                  pdfWindow.location.href =
-                    "https://redstarpunnathala.in/api/pdfprint/book_lending";
-                } else {
+                if (!pdfWindow) {
                   alert(
                     "Please allow pop-ups in your browser to view the PDF."
                   );

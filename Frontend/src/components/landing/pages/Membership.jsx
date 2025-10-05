@@ -286,14 +286,11 @@ export default function Membership() {
             <button
               onClick={() => {
                 const pdfWindow = window.open(
-                  "",
+                  "https://redstarpunnathala.in/api/pdfprint/memberships",
                   "_blank",
                   "noopener,noreferrer"
                 );
-                if (pdfWindow) {
-                  pdfWindow.location.href =
-                    "https://redstarpunnathala.in/api/pdfprint/memberships";
-                } else {
+                if (!pdfWindow) {
                   alert(
                     "Please allow pop-ups in your browser to view the PDF."
                   );
