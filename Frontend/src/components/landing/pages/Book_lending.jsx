@@ -622,7 +622,7 @@ export default function BookLending() {
                   onChange={(e) =>
                     setEditingRow({ ...editingRow, member: e.value || "" })
                   }
-                  className="w-full placeholder:text-sm !font-[poppins] [&_.p-dropdown-label]:!p-1.5 "
+                  className="w-full placeholder:text-sm !font-[poppins] [&_.p-dropdown-label]:!p-1.5 [&_.p-dropdown-filter]:!p-1.5"
                   filter
                   filterBy="label,name,membershipId"
                   showClear
