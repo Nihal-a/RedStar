@@ -8,7 +8,7 @@ from .views import prnitpdf
 
 urlpatterns = [
     path("api/graphql/", jwt_cookie(csrf_exempt(FileUploadGraphQLView.as_view(graphiql=True)))),
-    path("pdfprint/<url_type>",prnitpdf)
+    path("api/pdfprint/<url_type>",prnitpdf)
 ] 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
