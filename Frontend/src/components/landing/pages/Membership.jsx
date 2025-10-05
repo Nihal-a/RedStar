@@ -258,7 +258,7 @@ export default function Membership() {
 
   //pdf
   const handlePdf = async () => {
-    fetch("https://pdf.trickydot.com/url", {
+    fetch("http://pdf.trickydot.com/pdf/url", {
       method: "POST",
       headers: {
         "Content-type": "application/json",

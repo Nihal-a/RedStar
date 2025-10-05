@@ -203,7 +203,7 @@ export default function Book() {
 
   //pdf handling function
   const handlePdf = async () => {
-    fetch("https://pdf.trickydot.com/url", {
+    fetch("http://pdf.trickydot.com/pdf/url", {
       method: "POST",
       headers: {
         "Content-type": "application/json",

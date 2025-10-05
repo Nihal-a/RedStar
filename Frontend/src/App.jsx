@@ -8,6 +8,7 @@ function App() {
   return (
     <Routes>
       <Route path="/signin" element={<Signin />} />
+      <Route path="/report/:type" element={<PdfTemplate />} />
       <Route
         path="/*"
         element={
@@ -16,7 +17,6 @@ function App() {
           </PrivateRoute>
         }
       />
-      <Route path="/report/:type" element={<PdfTemplate />} />
     </Routes>
   );
 }
