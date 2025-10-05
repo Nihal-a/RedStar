@@ -162,6 +162,7 @@ class ChangePassword(graphene.Mutation):
 
         return ChangePassword(success=True, message="Password changed successfully.")
 
+
 class CreateInventory(graphene.Mutation):
     class Arguments:
         name = graphene.String(required=True)

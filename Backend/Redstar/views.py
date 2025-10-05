@@ -1,18 +1,23 @@
-# from django.http import JsonResponse
-# from graphql_jwt.utils import jwt_encode, jwt_decode
-# from graphql_jwt.exceptions import JSONWebTokenError
+from django.http import HttpResponse
+import requests
 
-# def refresh_access_token(request):
-#     refresh = request.COOKIES.get("refresh_token")
-#     if not refresh:
-#         return JsonResponse({"error": "No refresh token"}, status=401)
+def prnitpdf(request, url_type):
+    pdf_bytes = generate_pdf_from_url(url_type)
+    response = HttpResponse(pdf_bytes, content_type="application/pdf")
+    response["Content-Disposition"] = f'inline; filename="Report_{url_type}.pdf"'
+    return response
 
-#     try:
-#         # Decode the refresh token first (optional check)
-#         payload = jwt_decode(refresh)
 
-#         # Generate new access token
-#         new_token = jwt_encode(payload)
-#         return JsonResponse({"access_token": new_token})
-#     except JSONWebTokenError:
-#         return JsonResponse({"error": "Invalid refresh token"}, status=401)
+def generate_pdf_from_url(url_type: str) -> bytes:
+    api_url = "http://pdf.trickydot.com/pdf/url"
+    payload = {
+        "url": f"https://redstarpunnathala.in/report/{url_type}"
+    }
+    headers = {
+        "Content-Type": "application/json; charset=utf-8",
+        "x-api-key": "trickydot_pdf_maker_api"
+    }
+
+    response = requests.post(api_url, json=payload, headers=headers, timeout=120)
+    response.raise_for_status()
+    return response.content
