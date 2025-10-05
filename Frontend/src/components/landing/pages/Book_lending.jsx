@@ -588,6 +588,7 @@ export default function BookLending() {
               <label className="block text-sm font-medium mb-1 !font-[poppins]">
                 Lender*
               </label>
+
               {memberLoading ? (
                 ""
               ) : (
@@ -612,14 +613,20 @@ export default function BookLending() {
                         }`,
                         value: mbr.id.toString(),
                         disabled: isExpired,
+                        name: mbr.name,
+                        membershipId: mbr.membershipId,
                       };
                     }) || []),
                   ]}
-                  placeholder="Type lender name..."
+                  placeholder="Type lender name or ID..."
                   onChange={(e) =>
                     setEditingRow({ ...editingRow, member: e.value || "" })
                   }
                   className="w-full placeholder:text-sm !font-[poppins] [&_.p-dropdown-label]:!p-1.5 "
+                  filter
+                  filterBy="label,name,membershipId"
+                  showClear
+                  filterPlaceholder="Search by name or ID"
                 />
               )}
             </div>
