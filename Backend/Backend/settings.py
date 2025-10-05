@@ -14,7 +14,7 @@ SECRET_KEY = env('SECRETKEY')
 
 DEBUG = env('DEBUG')
 
-ALLOWED_HOSTS = ['redstarpunnathala.in',]
+ALLOWED_HOSTS = ['redstarpunnathala.in']
 
 
 

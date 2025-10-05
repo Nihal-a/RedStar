@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import redstar_full from "../../assets/redstar_full.svg";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@apollo/client/react";
+import "./pdf.css";
 import {
   GET_BOOK_LENDING,
   GET_BOOKS,

@@ -1,0 +1,24 @@
+@media (min-width: 767px) {
+  .mb-d-none {
+    display: none !important;
+  }
+}
+
+@media print {
+  .pdf-wrapper {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  @page {
+    margin: 0!important;
+    size: A4 portrait;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 210mm;
+    height: 297mm;
+  }
+}
