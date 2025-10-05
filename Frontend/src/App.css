@@ -7,6 +7,12 @@
 }
 
 @media print {
+  body {
+    background: red !important;
+  }
+}
+
+/* @media print {
   @page {
     size: A4 portrait; 
     margin: 0; 
@@ -26,4 +32,4 @@
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-}
+} */
