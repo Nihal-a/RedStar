@@ -16,14 +16,7 @@ function App() {
           </PrivateRoute>
         }
       />
-      <Route
-        path="/report/:type"
-        element={
-          <PrivateRoute>
-            <PdfTemplate />
-          </PrivateRoute>
-        }
-      />
+      <Route path="/report/:type" element={<PdfTemplate />} />
     </Routes>
   );
 }
