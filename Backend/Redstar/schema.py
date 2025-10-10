@@ -526,10 +526,6 @@ class DeleteMembership(graphene.Mutation):
         except Memberships.DoesNotExist:
             return DeleteMembership(ok=False)
     
-import graphene
-from graphql import GraphQLError
-from .models import Books
-from .types import BookType
 
 class CreateBook(graphene.Mutation):
     class Arguments:
@@ -541,25 +537,30 @@ class CreateBook(graphene.Mutation):
     book = graphene.Field(BookType)
 
     def mutate(root, info, name, author, category, total):
+        name = name.strip()
+        author = author.strip()
+        category = category.strip()
+
         existing_book = Books.objects.filter(
-            name__iexact=name.strip(),
-            author__iexact=author.strip(),
-            category__iexact=category.strip()
+            name__iexact=name,
+            author__iexact=author,
+            category__iexact=category
         ).first()
 
         if existing_book:
-            raise GraphQLError("A book with the same name, author, and category already exists.")
+            raise GraphQLError(
+                f"A book named '{name}' by '{author}' in category '{category}' already exists."
+            )
 
         book = Books.objects.create(
-            name=name.strip(),
-            author=author.strip(),
-            category=category.strip(),
+            name=name,
+            author=author,
+            category=category,
             total=total,
             available=total
         )
 
         return CreateBook(book=book)
-
    
 
 
