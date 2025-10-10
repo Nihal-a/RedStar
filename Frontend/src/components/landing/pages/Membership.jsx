@@ -330,9 +330,9 @@ export default function Membership() {
             <DataTable
               value={data.memberships}
               dataKey="id"
-              alwaysShowPaginator={false}
+              alwaysShowPaginator={true}
               paginatorClassName="mt-3"
-              paginator={data.memberships > 5}
+              paginator={data?.memberships?.length > 5 || rows > 10}
               rowsPerPageOptions={[5, 10, 20, 50]}
               rows={rows}
               first={first}

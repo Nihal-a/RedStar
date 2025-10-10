@@ -434,7 +434,7 @@ export default function Inventory() {
               dataKey="id"
               alwaysShowPaginator={true}
               paginatorClassName="mt-3"
-              paginator={categoryData?.categories?.length > 5 || rows > 5}
+              paginator={categoryData?.categories?.length > 5 || rows > 10}
               rowsPerPageOptions={[5, 10, 20, 50]}
               rows={rows}
               first={first}

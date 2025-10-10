@@ -269,9 +269,8 @@ export default function Book() {
             <DataTable
               value={data.books}
               dataKey="id"
-              draggable={false}
               paginatorClassName="mt-3 "
-              paginator={data.books.length > 5}
+              paginator={data?.books?.length > 5 || rows > 10}
               rows={rows}
               rowsPerPageOptions={[5, 10, 20, 50]}
               alwaysShowPaginator={true}

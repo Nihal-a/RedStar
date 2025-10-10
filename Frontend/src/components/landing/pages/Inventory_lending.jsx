@@ -464,9 +464,9 @@ export default function InventoryLending() {
             <DataTable
               value={data.inventoryLending}
               dataKey="id"
-              alwaysShowPaginator={false}
+              alwaysShowPaginator={true}
               paginatorClassName="mt-3"
-              paginator={data.inventoryLending?.length > 5}
+              paginator={data?.inventoryLending?.length > 5 || rows > 10}
               rowsPerPageOptions={[5, 10, 20, 50]}
               rows={rows}
               removableSort

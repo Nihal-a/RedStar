@@ -373,9 +373,9 @@ export default function BookLending() {
             <DataTable
               value={data.bookLending}
               dataKey="id"
-              alwaysShowPaginator={false}
+              alwaysShowPaginator={true}
               paginatorClassName="mt-3"
-              paginator={data.bookLending?.length > 5}
+              paginator={data?.bookLending?.length > 5 || rows > 10}
               rowsPerPageOptions={[5, 10, 20, 50]}
               removableSort
               size="normal"
