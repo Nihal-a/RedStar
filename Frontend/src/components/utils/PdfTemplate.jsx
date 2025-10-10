@@ -212,88 +212,77 @@ const PdfTemplate = () => {
   }
 
   return (
-    <div className="flex justify-center pdf-wrapper">
-      <div className="relative w-[210mm] h-screen text-[poppins]">
-        <div className="header fixed top-0 w-[210mm] h-[60mm] bg-[#f8f8f8] flex flex-col ">
-          <div className="top-sec h-[35mm] flex items-center justify-between border-b-1">
-            <img src={redstar_full} alt="RedStar_logo" className="h-[20mm]" />
-            <h1 className="text-[24px] font-[poppins] font-semibold uppercase text-[#e01514]">
+    <div className="pdf-wrapper flex justify-center">
+      <div 
+        className="pdf-container relative w-[210mm] min-h-[297mm] bg-white box-border"
+        style={{ pageBreakAfter: 'auto' }}
+      >
+        {/* Header */}
+        <div className="header w-full h-auto min-h-[60mm] bg-[#f8f8f8] flex flex-col px-[20mm] py-[5mm] box-border">
+          <div className="top-sec flex items-center justify-between pb-[3mm] border-b border-gray-300">
+            <img 
+              src={redstar_full} 
+              alt="RedStar_logo" 
+              className="h-[20mm] w-auto object-contain" 
+            />
+            <h1 className="text-[20px] font-[poppins] font-semibold uppercase text-[#e01514] text-right max-w-[100mm]">
               {head}
             </h1>
           </div>
-          <div className="h-[30mm] flex items-center justify-between text-[14px] py-1">
-            <div className="address flex flex-col">
-              <p>Reg No:</p>
-              <p>Mukkilapeedika,</p>
-              <p>Punnathala, Malappuram</p>
-              <p>Kerala, 676552</p>
+          
+          <div className="flex items-center justify-between pt-[3mm] pb-[2mm]">
+            <div className="address flex flex-col text-[11px] leading-[1.4]">
+              <p className="m-0 p-0">Reg No:</p>
+              <p className="m-0 p-0">Mukkilapeedika,</p>
+              <p className="m-0 p-0">Punnathala, Malappuram</p>
+              <p className="m-0 p-0">Kerala, 676552</p>
             </div>
-            <div className="date h-full flex items-center">
-              <p className="text-[14px]">
+            <div className="date flex items-center">
+              <p className="text-[11px] m-0 p-0 whitespace-nowrap">
                 Date: {new Date().toLocaleDateString()}
               </p>
             </div>
           </div>
         </div>
 
+        {/* Table Content */}
+        <div className="table-content w-full px-[10mm] py-[8mm] box-border">
+          <table className="w-full border-collapse border border-gray-300 text-[11px]">
+            <thead className="bg-[#e01514]">
+              <tr>
+                {columns.map((col) => (
+                  <th
+                    key={col.key}
+                    className="border border-gray-300 px-2 py-2 uppercase text-white text-left font-semibold"
+                  >
+                    {col.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, rowIndex) => (
+                <tr key={rowIndex} className="hover:bg-gray-50">
+                  {columns.map((col) => (
+                    <td
+                      key={col.key}
+                      className="border border-gray-300 px-2 py-2 align-top"
+                    >
+                      {row[col.key] ?? ""}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
         {/* Footer */}
-        <div className="footer fixed bottom-0 w-[210mm] h-[10mm] bg-[#e01514] flex items-center justify-center gap-1 text-white">
-          <p className="text-[13px] leading-none">
+        <div className="footer w-full h-[10mm] bg-[#e01514] flex items-center justify-center text-white box-border mt-auto">
+          <p className="text-[11px] leading-none m-0 p-0">
             - 6282260244 - 8157886888 - 9846080265 -
           </p>
         </div>
-
-        {/* Table */}
-        <table className="w-full">
-          <thead>
-            <tr>
-              <td>
-                <div className="h-[65mm]"></div>
-              </td>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <table className="text-black w-[190mm] border-collapse border border-gray-300 text-[14px] mx-auto">
-                  <thead className="bg-[#e01514]">
-                    <tr>
-                      {columns.map((col) => (
-                        <th
-                          key={col.key}
-                          className="border border-gray-300 px-3 py-2 uppercase text-white"
-                        >
-                          {col.label}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((row, rowIndex) => (
-                      <tr key={rowIndex} className="hover:bg-gray-100">
-                        {columns.map((col) => (
-                          <td
-                            key={col.key}
-                            className="border border-gray-300 px-4 py-2"
-                          >
-                            {row[col.key] ?? ""}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </td>
-            </tr>
-          </tbody>
-          <tfoot>
-            <tr>
-              <td>
-                <div className="h-[10mm]"></div>
-              </td>
-            </tr>
-          </tfoot>
-        </table>
       </div>
     </div>
   );
