@@ -212,17 +212,17 @@ const PdfTemplate = () => {
   }
 
   return (
-    <div className="flex justify-center pdf-wrapper" style={{ pageBreakAfter: 'avoid' }}>
-      <div className="relative w-[210mm] h-[297mm] max-h-[297mm] overflow-hidden box-border" style={{ pageBreakInside: 'avoid' }}>
-        <div className="header absolute top-0 left-0 w-[210mm] h-[60mm] bg-[#f8f8f8] flex flex-col px-[20mm] box-border overflow-hidden">
+    <div className="flex justify-center pdf-wrapper">
+      <div className="relative w-[210mm] h-screen text-[poppins]">
+        <div className="header fixed top-0 w-[210mm] h-[60mm] bg-[#f8f8f8] flex flex-col px-[10mm] ">
           <div className="top-sec h-[35mm] flex items-center justify-between border-b-1">
             <img src={redstar_full} alt="RedStar_logo" className="h-[20mm]" />
             <h1 className="text-[24px] font-[poppins] font-semibold uppercase text-[#e01514]">
               {head}
             </h1>
           </div>
-          <div className="h-[25mm] flex items-center justify-between text-[14px] py-1">
-            <div className="address flex flex-col leading-tight">
+          <div className="h-[30mm] flex items-center justify-between text-[14px] py-1">
+            <div className="address flex flex-col">
               <p>Reg No:</p>
               <p>Mukkilapeedika,</p>
               <p>Punnathala, Malappuram</p>
@@ -237,58 +237,63 @@ const PdfTemplate = () => {
         </div>
 
         {/* Footer */}
-        <div className="footer absolute bottom-0 left-0 w-[210mm] h-[10mm] bg-[#e01514] flex items-center justify-center gap-1 text-white box-border">
+        <div className="footer fixed bottom-0 w-[210mm] h-[10mm] bg-[#e01514] flex items-center justify-center gap-1 text-white">
           <p className="text-[13px] leading-none">
             - 6282260244 - 8157886888 - 9846080265 -
           </p>
         </div>
 
-        {/* Table - Constrained height */}
-        <div className="absolute top-[60mm] left-0 w-[210mm] h-[227mm] overflow-hidden">
-          <table className="w-full h-full" style={{ tableLayout: 'fixed' }}>
-            <thead>
-              <tr>
-                <td>
-                  <div className="h-[5mm]"></div>
-                </td>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td style={{ verticalAlign: 'top' }}>
-                  <table className="text-black w-[190mm] border-collapse border border-gray-300 text-[14px] mx-auto">
-                    <thead className="bg-[#e01514]">
-                      <tr>
+        {/* Table */}
+        <table className="w-full">
+          <thead>
+            <tr>
+              <td>
+                <div className="h-[65mm]"></div>
+              </td>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <table className="text-black w-[190mm] border-collapse border border-gray-300 text-[14px] mx-auto">
+                  <thead className="bg-[#e01514]">
+                    <tr>
+                      {columns.map((col) => (
+                        <th
+                          key={col.key}
+                          className="border border-gray-300 px-3 py-2 uppercase text-white"
+                        >
+                          {col.label}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((row, rowIndex) => (
+                      <tr key={rowIndex} className="hover:bg-gray-100">
                         {columns.map((col) => (
-                          <th
+                          <td
                             key={col.key}
-                            className="border border-gray-300 px-3 py-2 uppercase text-white"
+                            className="border border-gray-300 px-4 py-2"
                           >
-                            {col.label}
-                          </th>
+                            {row[col.key] ?? ""}
+                          </td>
                         ))}
                       </tr>
-                    </thead>
-                    <tbody>
-                      {rows.map((row, rowIndex) => (
-                        <tr key={rowIndex} className="hover:bg-gray-100">
-                          {columns.map((col) => (
-                            <td
-                              key={col.key}
-                              className="border border-gray-300 px-4 py-2"
-                            >
-                              {row[col.key] ?? ""}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+                    ))}
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td>
+                <div className="h-[10mm]"></div>
+              </td>
+            </tr>
+          </tfoot>
+        </table>
       </div>
     </div>
   );
