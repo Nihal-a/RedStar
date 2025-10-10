@@ -55,7 +55,7 @@ export default function BookLending() {
   });
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [first, setFirst] = useState(0);
-  const [rows, setRows] = useState(8);
+  const [rows, setRows] = useState(10);
 
   const navigate = useNavigate();
   // Modal states
@@ -278,6 +278,7 @@ export default function BookLending() {
   const onPage = (e) => {
     setFirst(e.first);
     setRows(e.rows);
+    setFilters((prev) => ({ ...prev })); // keep filters intact
   };
 
   return (
@@ -343,28 +344,29 @@ export default function BookLending() {
                 <i className="bi bi-search hidden md:block absolute left-[10px] top-[50%] translate-y-[-50%] text-[14px] text-black"></i>
               </div>
               <Dropdown
-                value={filters.status?.value ?? null}
+                value={
+                  filters.status?.value === undefined
+                    ? "ALL"
+                    : filters.status.value
+                }
                 options={[
                   { label: "All", value: "ALL" },
                   { label: "Pending", value: false },
                   { label: "Returned", value: true },
                 ]}
                 onChange={(e) => {
-                  let _filters = { ...filters };
-
-                  if (e.value === "ALL") {
-                    delete _filters["status"];
-                  } else {
-                    _filters["status"] = {
-                      value: e.value,
-                      matchMode: "equals",
-                    };
-                  }
-
-                  setFilters(_filters);
+                  setFilters((prev) => {
+                    const updated = { ...prev };
+                    if (e.value === "ALL") {
+                      delete updated.status;
+                    } else {
+                      updated.status = { value: e.value, matchMode: "equals" };
+                    }
+                    return updated;
+                  });
                 }}
-                placeholder="Filter by Status "
-                className="md:w-35 w-25  text-sm [&_.p-dropdown-label]:!p-1.5"
+                placeholder="Filter by Status"
+                className="md:w-35 w-25 text-sm [&_.p-dropdown-label]:!p-1.5"
               />
             </div>
 
@@ -378,6 +380,7 @@ export default function BookLending() {
               removableSort
               size="normal"
               stripedRows
+              rows={rows}
               first={first}
               onPage={onPage} //for when adding new coloumn new added will be listed at last
               filters={filters}

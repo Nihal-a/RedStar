@@ -30,7 +30,7 @@ export default function Book() {
   });
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [first, setFirst] = useState(0);
-  const [rows, setRows] = useState(5);
+   const [rows, setRows] = useState(10);
   const navigate = useNavigate();
 
   //modal
@@ -272,13 +272,13 @@ export default function Book() {
               draggable={false}
               paginatorClassName="mt-3 "
               paginator={data.books.length > 5}
-              rows={5}
+              rows={rows}
               rowsPerPageOptions={[5, 10, 20, 50]}
               alwaysShowPaginator={true}
               first={first}
               removableSort
               stripedRows
-              onPage={onPage} //for when adding new coloumn new added will be listed at last
+              onPage={onPage} 
               filters={filters}
               globalFilterFields={["name", "category", "author"]}
               emptyMessage="No books found."

@@ -37,7 +37,7 @@ export default function Membership() {
   });
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [first, setFirst] = useState(0);
-  const [rows, setRows] = useState(5);
+  const [rows, setRows] = useState(10);
   const navigate = useNavigate();
   // Modal states
   const [visible, setVisible] = useState(false);

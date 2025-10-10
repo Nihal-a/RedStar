@@ -526,19 +526,42 @@ class DeleteMembership(graphene.Mutation):
         except Memberships.DoesNotExist:
             return DeleteMembership(ok=False)
     
+import graphene
+from graphql import GraphQLError
+from .models import Books
+from .types import BookType
+
 class CreateBook(graphene.Mutation):
     class Arguments:
-        name = graphene.String(required = True)
-        author = graphene.String(required = True)
-        category = graphene.String(required = True)
-        total = graphene.Int(required = True)
+        name = graphene.String(required=True)
+        author = graphene.String(required=True)
+        category = graphene.String(required=True)
+        total = graphene.Int(required=True)
 
     book = graphene.Field(BookType)
 
-    def mutate(root, info, name, author, category, total ):
-        book = Books.objects.create(name=name, category=category, author=author, total=total, available=total )
+    def mutate(root, info, name, author, category, total):
+        existing_book = Books.objects.filter(
+            name__iexact=name.strip(),
+            author__iexact=author.strip(),
+            category__iexact=category.strip()
+        ).first()
+
+        if existing_book:
+            raise GraphQLError("A book with the same name, author, and category already exists.")
+
+        book = Books.objects.create(
+            name=name.strip(),
+            author=author.strip(),
+            category=category.strip(),
+            total=total,
+            available=total
+        )
+
         return CreateBook(book=book)
+
    
+
 
 class UpdateBook(graphene.Mutation):
     class Arguments:
@@ -551,46 +574,55 @@ class UpdateBook(graphene.Mutation):
     book = graphene.Field(BookType)
 
     def mutate(root, info, id, **kwargs):
-        book = Books.objects.get(pk=int(id))
+        try:
+            book = Books.objects.get(pk=int(id))
+        except Books.DoesNotExist:
+            raise GraphQLError("Book not found.")
+
+        new_name = kwargs.get("name", book.name)
+        new_author = kwargs.get("author", book.author)
+        new_category = kwargs.get("category", book.category)
+
+        existing_book = Books.objects.filter(
+            name__iexact=new_name.strip(),
+            author__iexact=new_author.strip(),
+            category__iexact=new_category.strip()
+        ).exclude(pk=book.pk).first()
+
+        if existing_book:
+            raise GraphQLError("A book with the same name, author, and category already exists.")
 
         if "total" in kwargs and kwargs["total"] is not None:
             new_total = kwargs["total"]
             old_total = book.total
             old_available = book.available
-
             lent_out = old_total - old_available
 
             if new_total < lent_out:
-                raise Exception(
+                raise GraphQLError(
                     f"Cannot reduce total to {new_total}, since {lent_out} copies are currently lent out."
                 )
 
             if new_total > old_total:
                 diff = new_total - old_total
                 book.available = old_available + diff
-
             elif new_total < old_total:
                 diff = old_total - new_total
-
                 if diff > old_available:
-                    raise Exception(
+                    raise GraphQLError(
                         f"Cannot reduce total by {diff}, only {old_available} copies are available."
                     )
-
                 book.available = old_available - diff
-            book.total = new_total
 
+            book.total = new_total
             kwargs.pop("total")
 
         for field, value in kwargs.items():
             if value is not None:
-                setattr(book, field, value)
+                setattr(book, field, value.strip() if isinstance(value, str) else value)
 
         book.save()
         return UpdateBook(book=book)
-
-
-    
 
 class DeleteBook(graphene.Mutation):
     class Arguments:

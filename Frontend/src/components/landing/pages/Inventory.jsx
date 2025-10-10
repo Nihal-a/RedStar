@@ -48,7 +48,7 @@ export default function Inventory() {
   const [categoryModalFilterValue, setCategoryModalFilterValue] = useState("");
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [first, setFirst] = useState(0);
-  const [rows, setRows] = useState(5);
+  const [rows, setRows] = useState(10);
 
   //Category modal States
   const [categoryModalVisible, setcategoryModalVisible] = useState(false);
