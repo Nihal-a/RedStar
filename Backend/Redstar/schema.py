@@ -541,16 +541,10 @@ class CreateBook(graphene.Mutation):
         author = author.strip()
         category = category.strip()
 
-        existing_book = Books.objects.filter(
-            name__iexact=name,
-            author__iexact=author,
-            category__iexact=category
-        ).first()
+        existing_book = Books.objects.filter(name__iexact=name).first()
 
         if existing_book:
-            raise GraphQLError(
-                f"A book named '{name}' by '{author}' in category '{category}' already exists."
-            )
+            raise GraphQLError(f"A book named '{name}' already exists.")
 
         book = Books.objects.create(
             name=name,
@@ -561,7 +555,7 @@ class CreateBook(graphene.Mutation):
         )
 
         return CreateBook(book=book)
-   
+
 
 
 class UpdateBook(graphene.Mutation):
