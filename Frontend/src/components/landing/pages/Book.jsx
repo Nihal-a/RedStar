@@ -30,7 +30,7 @@ export default function Book() {
   });
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [first, setFirst] = useState(0);
-   const [rows, setRows] = useState(10);
+  const [rows, setRows] = useState(10);
   const navigate = useNavigate();
 
   //modal
@@ -108,8 +108,6 @@ export default function Book() {
           refetchQueries: [{ query: GET_BOOKS }],
           awaitRefetchQueries: true,
         });
-        setEditingRow(null);
-        setVisible(false);
         toast.current?.show({
           severity: "success",
           summary: "Saved",
@@ -142,11 +140,17 @@ export default function Book() {
           detail: "changes saved.",
         });
       }
+      setEditingRow(null);
+      setVisible(false);
     } catch (err) {
+      const message =
+        err?.graphQLErrors?.[0]?.message ||
+        err?.message ||
+        "An unexpected error occurred.";
       toast.current?.show({
         severity: "error",
         summary: "Error",
-        detail: err.message,
+        detail: message,
       });
     }
   };
@@ -277,7 +281,7 @@ export default function Book() {
               first={first}
               removableSort
               stripedRows
-              onPage={onPage} 
+              onPage={onPage}
               filters={filters}
               globalFilterFields={["name", "category", "author"]}
               emptyMessage="No books found."
