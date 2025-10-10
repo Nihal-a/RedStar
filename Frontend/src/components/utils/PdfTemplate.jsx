@@ -214,7 +214,7 @@ const PdfTemplate = () => {
   return (
     <div className="flex justify-center pdf-wrapper">
       <div className="relative w-full h-screen text-[poppins]">
-        <div className="header fixed top-0 w-full h-[60mm] bg-[#f8f8f8] flex flex-col px-[10mm] ">
+        <div className="header fixed top-0 w-full h-[60mm] bg-[#f8f8f8] flex flex-col px-[6mm] ">
           <div className="top-sec h-[35mm] w-full flex items-center justify-between border-b-1">
             <img src={redstar_full} alt="RedStar_logo" className="h-[20mm]" />
             <h1 className="text-[24px] font-[poppins] font-semibold uppercase text-[#e01514]">
