@@ -393,11 +393,7 @@ export default function Inventory() {
                   "_blank",
                   "noopener,noreferrer"
                 );
-                if (!pdfWindow) {
-                  alert(
-                    "Please allow pop-ups in your browser to view the PDF."
-                  );
-                }
+                
               }}
             >
               <i className="bi bi-file-earmark-pdf pr-1"></i>

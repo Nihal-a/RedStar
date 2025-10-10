@@ -307,11 +307,7 @@ export default function BookLending() {
                   "_blank",
                   "noopener,noreferrer"
                 );
-                if (!pdfWindow) {
-                  alert(
-                    "Please allow pop-ups in your browser to view the PDF."
-                  );
-                }
+               
               }}
               className="rounded-lg text-[14px] font-semibold px-5 py-2 text-white bg-[#E01514] hover:bg-[#ff2828] flex items-center justify-center cursor-pointer"
             >
